@@ -129,13 +129,30 @@ footer b{color:#fff}
   border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;font-size:1rem;line-height:1;
   cursor:pointer;font-family:inherit;flex:0 0 auto;transition:background .15s,color .15s}
 #musicbtn.on{background:#fff;color:var(--rot)}
-#musicbtn.pulse{animation:mpulse 1.35s ease-in-out infinite}
-@keyframes mpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.55)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
 #toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-14px);z-index:1300;
   background:rgba(27,31,38,.92);color:#fff;font-size:.8rem;font-weight:800;padding:8px 16px;border-radius:999px;
   opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 #yt{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:.01;pointer-events:none;z-index:-1;border:0}
+
+/* ---- Frankreich-Gate: expliziter Klick, um den Ton zuverlässig freizugeben --
+   Browser lassen unmutierten Ton nur nach einer echten Geste zu; ein Klick auf
+   einen sichtbaren Button ist der einzige Weg, der in jedem Browser zuverlässig
+   funktioniert. Autopilot & Scrollen pausieren, solange der Dialog offen ist. */
+#francegate{position:fixed;inset:0;z-index:2500;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(15,17,22,.55);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .35s}
+#francegate.show{opacity:1;pointer-events:auto}
+#francegate .fgate-card{background:#fff;border-radius:22px;padding:34px 30px;max-width:380px;text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.4);transform:translateY(18px) scale(.96);transition:transform .35s}
+#francegate.show .fgate-card{transform:translateY(0) scale(1)}
+#francegate .fgate-flag{font-size:2.6rem;margin-bottom:8px}
+#francegate h4{font-size:1.4rem;font-weight:900;letter-spacing:-.02em;margin-bottom:8px}
+#francegate p{color:var(--grau);font-size:.9rem;font-weight:600;margin-bottom:22px;line-height:1.5}
+#francegate .fgate-actions{display:flex;flex-direction:column;gap:10px}
+#francegate .fgate-actions .rot{width:100%}
+#francegate .fgate-skip{background:none;border:none;color:var(--grau);font-family:inherit;font-size:.8rem;
+  font-weight:700;text-decoration:underline;cursor:pointer;padding:6px}
 
 /* ---- Reise-Trikot (Croissant du matin, tout va bien!) ----------------------- */
 .teewrap{max-width:340px;margin:8px auto 0;text-align:center}

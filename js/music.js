@@ -1,24 +1,22 @@
 /* ==========================================================================
    Schlemmer Bahn – Musik: „La vie en rose" (Zaz) am Rheinübergang
-   Braucht: js/data.js (SB.config.YT_ID), js/ui.js (SB.showToast)
+   Braucht: js/data.js (SB.config.YT_ID), js/ui.js (SB.showToast),
+            js/story.js (SB.autopilot.hold)
    Stellt bereit: SB.music.reachFrance()
 
    Autoplay-Strategie:
-   Browser erlauben Ton nur nach einer „aktivierenden" Geste — laut Spec sind
-   das NUR click, keydown und touchend. Scrollen (wheel/touchmove/scroll),
-   auch das automatische Weiterscrollen des Autopiloten, zählt NICHT. Wer die
-   Seite nur mit dem Mausrad durchscrollt, löst also nie von selbst eine
-   gültige Geste aus — deshalb reichte es vorher oft nicht bis Frankreich.
+   Browser erlauben unmutierten Ton nur nach einer „aktivierenden" Geste —
+   und bei einem eingebetteten, plattformfremden YouTube-Player (der Ton läuft
+   im iFrame, gesteuert per postMessage) verlangen manche Browser, dass genau
+   DIESER Aufruf noch synchron innerhalb eines echten Klick-Handlers passiert.
+   Ein früh „geprimtes" Scrollen/Wischen reicht dafür nicht zuverlässig überall.
 
-   Lösung: Sobald IRGENDWO auf der Seite die allererste gültige Geste
-   passiert (bei Touch meist einfach der erste Wisch zum Scrollen — ganz
-   normales Verhalten, kein Extra-Tap nötig), wird der Player kurz lautlos
-   an- und wieder ausgeschaltet („primen"). Das „verbraucht" die Geste schon
-   VOR Frankreich. Kommt der Zug dann am Rhein an, wird nur noch die
-   Lautstärke hochgefadet — kein neuer play()-Aufruf, also auch keine neue
-   Geste nötig. Nur wenn bis Frankreich wirklich noch NIE eine gültige Geste
-   vorkam (z. B. reines Mausrad-Scrollen ohne jeden Klick), bleibt der
-   stumme Fallback mit Freischaltung bei der nächsten Geste übrig.
+   Deshalb: sobald der Zug Frankreich erreicht, erscheint ein kurzer, klarer
+   Dialog („Wir überqueren den Rhein.“). Der Klick auf „Musik an & weiter" ist
+   eine echte, frische Geste direkt am Button — das funktioniert in jedem
+   Browser zuverlässig. Danach wird die Lautstärke sanft von 0 hochgefadet,
+   kein harter Einsatz. Autopilot & Scrollen pausieren, solange der Dialog
+   offen ist, und laufen beim Schließen genau da weiter, wo sie waren.
    ========================================================================== */
 (function(){
 'use strict';
@@ -26,10 +24,11 @@ var SB=window.SB;
 var cfg=SB.config;
 var TARGET_VOL=65;
 var musicbtn=document.getElementById('musicbtn');
+var gate=document.getElementById('francegate');
+var gateGo=document.getElementById('fgate-go'),gateSkip=document.getElementById('fgate-skip');
 
 var ytPlayer=null,ytReady=false,apiRequested=false;
-var wantMusic=false,franceHit=false,mutedFallback=false,playing=false;
-var primed=false,priming=false,primeRequested=false;
+var wantMusic=false,franceHit=false,playing=false,pendingPlay=false;
 var fadeTimer=null;
 
 /* Lautstärke in kleinen Schritten auf `to` bringen statt hart zu springen. */
@@ -59,111 +58,91 @@ window.onYouTubeIframeAPIReady=function(){
     events:{
       onReady:function(){
         ytReady=true;
-        if(primeRequested)primeNow();
-        if(wantMusic)tryPlay();
+        if(pendingPlay){pendingPlay=false;startWithFadeIn();}
       },
       onStateChange:function(e){
-        if(priming)return;   // kurzes Stumm-Anspielen soll die Anzeige nicht flackern lassen
         playing=(e.data===1);   // 1 = PLAYING
         setUI();
       }
     }});
 };
+/* Player so früh wie möglich laden, damit er beim Dialog schon bereitsteht. */
+['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
+  window.addEventListener(ev,loadAPI,{passive:true,once:true});
+});
 
 function setUI(){
   if(!musicbtn)return;
-  var on=playing&&!mutedFallback;   // „an" heißt: läuft UND ist hörbar
-  musicbtn.classList.toggle('on',on);
-  if(on)musicbtn.classList.remove('pulse');
-  musicbtn.setAttribute('aria-pressed',on?'true':'false');
+  musicbtn.classList.toggle('on',playing);
+  musicbtn.setAttribute('aria-pressed',playing?'true':'false');
 }
 
-/* Erste gültige Geste irgendwo auf der Seite → Player kurz lautlos anspielen
-   und sofort wieder pausieren. „Verbraucht" die Geste schon vor Frankreich,
-   damit dort nur noch die Lautstärke hochgefadet werden muss. */
-function primeNow(){
-  if(primed||priming)return;
-  if(!ytReady){primeRequested=true;loadAPI();return;}
-  priming=true;
-  try{ytPlayer.unMute();ytPlayer.setVolume(0);ytPlayer.playVideo();}catch(e){}
-  setTimeout(function(){
-    try{ytPlayer.pauseVideo();}catch(e){}
-    primed=true;priming=false;
-  },300);
-}
-
-function tryPlay(){
+/* Direkt aus einem echten Klick-Handler aufrufen — nur dann ist der Ton in
+   jedem Browser garantiert erlaubt. Startet bei Lautstärke 0 und blendet auf. */
+function startWithFadeIn(){
   wantMusic=true;
-  if(!ytReady){loadAPI();return;}   // onReady ruft tryPlay() erneut
-  if(primed){
-    // Schon früher freigeschaltet — nur fortsetzen & einblenden, kein neuer
-    // play()-Aufruf nötig, also auch keine frische Geste erforderlich.
-    mutedFallback=false;
-    try{ytPlayer.unMute();ytPlayer.playVideo();}catch(e){}
-    fadeVolume(TARGET_VOL,2600);
-    return;
-  }
+  if(!ytReady){pendingPlay=true;loadAPI();return;}
   try{ytPlayer.unMute();ytPlayer.setVolume(0);ytPlayer.playVideo();}catch(e){}
-  // Nach kurzer Frist prüfen, ob der Ton wirklich läuft.
-  clearTimeout(tryPlay._t);
-  tryPlay._t=setTimeout(function(){
-    if(!wantMusic)return;
-    var st=-9;try{st=ytPlayer.getPlayerState();}catch(e){}
-    if(st===1||st===3){   // PLAYING oder BUFFERING → hörbar gestartet, einblenden
-      primed=true;mutedFallback=false;
-      fadeVolume(TARGET_VOL,2600);
-    } else {               // vom Browser geblockt (noch nie eine gültige Geste) → Stumm-Start
-      mutedFallback=true;
-      try{ytPlayer.mute();ytPlayer.setVolume(TARGET_VOL);ytPlayer.playVideo();}catch(e){}
-      if(musicbtn)musicbtn.classList.add('pulse');
-      SB.showToast('♪ läuft stumm — einmal tippen für Ton');
-    }
-  },900);
+  fadeVolume(TARGET_VOL,2600);
 }
 function pause(){
   wantMusic=false;
   clearInterval(fadeTimer);
   try{ytPlayer&&ytPlayer.pauseVideo();}catch(e){}
 }
-/* Erste Geste nach dem Stumm-Start → Ton an, sanft eingeblendet. */
-function unlockSound(){
-  if(!mutedFallback||!ytReady)return;
-  primed=true;mutedFallback=false;
-  try{
-    ytPlayer.unMute();ytPlayer.setVolume(0);
-    if(ytPlayer.getPlayerState()!==1)ytPlayer.playVideo();
-  }catch(e){}
+function resumeWithFadeIn(){
+  if(!ytReady)return;
+  wantMusic=true;
+  try{ytPlayer.playVideo();}catch(e){}
   fadeVolume(TARGET_VOL,1800);
-  if(musicbtn)musicbtn.classList.remove('pulse');
-  setUI();
-  SB.showToast('♪ La vie en rose · Zaz');
+}
+
+/* ---- Frankreich-Gate: Dialog, Scroll-/Autopilot-Sperre ------------------------ */
+var gateOpen=false;
+function blockScroll(e){if(gateOpen)e.preventDefault();}
+function blockScrollKeys(e){
+  if(!gateOpen||gate.contains(e.target))return;
+  if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].indexOf(e.key)>-1)e.preventDefault();
+}
+window.addEventListener('wheel',blockScroll,{passive:false});
+window.addEventListener('touchmove',blockScroll,{passive:false});
+window.addEventListener('keydown',blockScrollKeys);
+
+function openGate(){
+  if(!gate)return;
+  gateOpen=true;
+  gate.classList.add('show');
+  gate.setAttribute('aria-hidden','false');
+  SB.autopilot&&SB.autopilot.hold(true);
+  if(gateGo)gateGo.focus();
+}
+function closeGate(){
+  if(!gate)return;
+  gateOpen=false;
+  gate.classList.remove('show');
+  gate.setAttribute('aria-hidden','true');
+  SB.autopilot&&SB.autopilot.hold(false);
+}
+if(gateGo)gateGo.addEventListener('click',function(){closeGate();startWithFadeIn();});
+if(gateSkip)gateSkip.addEventListener('click',closeGate);
+if(gate){
+  gate.addEventListener('click',function(e){if(e.target===gate)closeGate();});   // Klick auf Backdrop
+  gate.addEventListener('keydown',function(e){if(e.key==='Escape')closeGate();});
 }
 
 SB.music={
   reachFrance:function(){
     if(franceHit)return;franceHit=true;
-    if(musicbtn){musicbtn.style.display='inline-flex';if(!primed)musicbtn.classList.add('pulse');}
-    SB.showToast('♪ La vie en rose · Zaz');
-    tryPlay();
+    if(musicbtn)musicbtn.style.display='inline-flex';
+    openGate();
   }
 };
 
+/* Der ♪-Button dient nach dem Dialog nur noch als Pause/Weiter-Schalter. */
 if(musicbtn){
   musicbtn.addEventListener('click',function(){
-    musicbtn.classList.remove('pulse');
-    if(mutedFallback){unlockSound();return;}
-    if(playing){pause();}
-    else{if(!ytReady)SB.showToast('♪ Musik lädt …');tryPlay();}
+    if(!ytReady&&!playing){SB.showToast('♪ Musik lädt …');return;}
+    if(playing)pause();else resumeWithFadeIn();
   });
 }
-/* Gültige Aktivierungs-Gesten laut Spec: click, keydown, touchend (NICHT
-   wheel/touchmove/pointerdown — die zählen für Browser nicht als „Geste"). */
-['click','keydown','touchend'].forEach(function(ev){
-  window.addEventListener(ev,function(){primeNow();unlockSound();},{passive:true});
-});
-/* Player so früh wie möglich laden (auch bei Scroll-Vorgeschmack), damit die
-   erste echte Geste sofort etwas zum Primen vorfindet. */
-['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
-  window.addEventListener(ev,loadAPI,{passive:true,once:true});
-});
 })();

@@ -86,6 +86,7 @@ var auto={engaged:false,paused:false,pps:0,lastInput:0,raf:null};
 var ctl=document.getElementById('autoctl'),abtn=document.getElementById('autobtn');
 var RESUME_DELAY=900;   // ms Ruhe, bevor der Autopilot wieder übernimmt
 var MAX_DT=0.05;        // s – größere Frame-Lücken kappen (Anti-Ruck)
+var externalHold=false; // von außen angehalten (z. B. Frankreich-Dialog offen)
 function nowMs(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();}
 function computeSpeed(){
   var total=scrolly.getBoundingClientRect().height-window.innerHeight;
@@ -101,7 +102,7 @@ function aloop(ts){
   // Touch-Events enden beim Loslassen, iOS gleitet aber weiter — dieser
   // Frame-Vergleich zählt die Schonfrist ab dem echten Stillstand.
   if(lastY!==null&&Math.abs(window.scrollY-lastY)>2)noteInput();
-  if(!auto.paused&&(nowMs()-auto.lastInput)>RESUME_DELAY){
+  if(!auto.paused&&!externalHold&&(nowMs()-auto.lastInput)>RESUME_DELAY){
     window.scrollBy(0,auto.pps*dt);
     if(progress()>=0.999){setPaused(true);auto.raf=null;return;}  // Endstation
   }
@@ -139,4 +140,16 @@ abtn.addEventListener('click',function(){
     if(!auto.raf)auto.raf=requestAnimationFrame(aloop);
   }
 });
+
+/* Von außen anhalten/freigeben (Frankreich-Dialog): hält den Autopiloten
+   an, ohne den „⏸ Anhalten"-Zustand des Nutzers zu verändern. */
+SB.autopilot={
+  hold:function(on){
+    externalHold=on;
+    if(!on&&auto.engaged&&!auto.paused){
+      auto.lastInput=0;lastT=null;
+      if(!auto.raf)auto.raf=requestAnimationFrame(aloop);
+    }
+  }
+};
 })();
