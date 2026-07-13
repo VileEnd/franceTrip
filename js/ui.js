@@ -33,9 +33,10 @@ var cardsBox=document.getElementById('cards');
 SC.forEach(function(s,i){
   var el=document.createElement('div');el.className='scard';el.id='card'+i;
   var chips=s.ch?'<div class="chips">'+s.ch.map(function(c){return '<span class="chip">'+c+'</span>'}).join('')+'</div>':'';
+  var fakt=s.fact?'<div class="fakt">💡 '+s.fact+'</div>':'';
   el.innerHTML='<span class="badge '+s.cls+'">'+s.badge+'</span>'+
     '<h2><span class="h2t"></span><span class="caret"></span></h2>'+
-    '<div class="witz">'+s.w+'</div><div class="txt">'+s.x+'</div>'+chips+
+    '<div class="witz">'+s.w+'</div><div class="txt">'+s.x+'</div>'+fakt+chips+
     '<span class="kost'+(s.frei?' frei':'')+'">'+s.k+'</span>';
   cardsBox.appendChild(el);
   ['.witz','.txt'].forEach(function(sel){
@@ -55,35 +56,44 @@ SC.forEach(function(s,i){
   });
 });
 
-/* ---- Schreibmaschine: Titel tippen, dann Wörter einblenden -------------------- */
+/* ---- Live-Handschrift: Titel Buchstabe für Buchstabe, dann schreibt ein
+   kleiner Stift die Notizen Wort für Wort — mit menschlich-unregelmäßigem
+   Tempo. Fun Fact, Chips & Preis erscheinen zum Schluss als „Aufkleber".     */
 var typeTimers=[];
 function clearType(){typeTimers.forEach(clearTimeout);typeTimers=[];}
+function setDone(el,on){
+  ['.fakt','.chips','.kost'].forEach(function(sel){
+    var n=el.querySelector(sel);
+    n&&n.classList[on?'add':'remove']('an');
+  });
+}
 SB.startType=function(i){
   clearType();
   var el=document.getElementById('card'+i),s=SC[i];
   var h=el.querySelector('.h2t'),caret=el.querySelector('.caret');
   h.textContent='';caret.style.display='inline-block';
+  el.querySelectorAll('.pen').forEach(function(p){p.remove()});
   el.querySelectorAll('.tw').forEach(function(w){w.classList.remove('an')});
-  el.querySelector('.chips')&&el.querySelector('.chips').classList.remove('an');
-  el.querySelector('.kost').classList.remove('an');
+  setDone(el,false);
   if(SB.reduced){ h.textContent=s.t;caret.style.display='none';
     el.querySelectorAll('.tw').forEach(function(w){w.classList.add('an')});
-    el.querySelector('.chips')&&el.querySelector('.chips').classList.add('an');
-    el.querySelector('.kost').classList.add('an');return;}
+    setDone(el,true);return;}
   var title=s.t,ci=0;
   (function tick(){
-    if(ci<=title.length){h.textContent=title.slice(0,ci);ci++;typeTimers.push(setTimeout(tick,34));}
+    if(ci<=title.length){h.textContent=title.slice(0,ci);ci++;typeTimers.push(setTimeout(tick,30+Math.random()*28));}
     else{caret.style.display='none';words();}
   })();
   function words(){
     var ws=el.querySelectorAll('.tw'),wi=0;
+    var pen=document.createElement('span');pen.className='pen';pen.textContent='✍️';
     (function wtick(){
-      if(wi<ws.length){ws[wi].classList.add('an');wi++;typeTimers.push(setTimeout(wtick,42));}
-      else{
-        typeTimers.push(setTimeout(function(){
-          el.querySelector('.chips')&&el.querySelector('.chips').classList.add('an');
-          el.querySelector('.kost').classList.add('an');
-        },250));
+      if(wi<ws.length){
+        var w=ws[wi];w.classList.add('an');
+        w.parentNode.insertBefore(pen,w.nextSibling);   // der Stift folgt dem Wort
+        wi++;typeTimers.push(setTimeout(wtick,36+Math.random()*52));
+      }else{
+        pen.remove();
+        typeTimers.push(setTimeout(function(){setDone(el,true);},250));
       }
     })();
   }

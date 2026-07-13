@@ -18,11 +18,29 @@ function progress(){
   return clamp(-rect.top/Math.max(rect.height-vh,1),0,1);
 }
 
-/* ---- Render: Karte + Karten-Overlay aus der Scrollposition ------------------- */
-var raf=null,lastSi=-1;
-function render(){
-  raf=null;
-  var p=progress();
+/* ---- Sanfter Zug: die Scrollposition wird pro Frame geglättet -----------------
+   Scroll-Events kommen stufig (Mausrad-Rasten, Touch-Ticks) — würde die Karte
+   ihnen direkt folgen, springt der Zug. Stattdessen folgt eine geglättete
+   Position dem Scroll-Ziel exponentiell: butterweich & framerate-unabhängig.   */
+var smoothP=0,smoothInit=false,animRaf=null,animLastTs=null;
+function animate(ts){
+  animRaf=null;
+  if(animLastTs===null)animLastTs=ts;
+  var dt=Math.min((ts-animLastTs)/1000,0.1);animLastTs=ts;
+  var target=progress();
+  if(!smoothInit||SB.reduced){smoothP=target;smoothInit=true;}
+  else{
+    smoothP+=(target-smoothP)*(1-Math.exp(-dt*8));
+    if(Math.abs(target-smoothP)<0.00004)smoothP=target;   // eingerastet
+  }
+  render(smoothP);
+  if(smoothP!==target)animRaf=requestAnimationFrame(animate);   // weiter glätten
+  else animLastTs=null;                                          // Ruhe: Loop aus
+}
+
+/* ---- Render: Karte + Karten-Overlay aus der (geglätteten) Position ------------ */
+var lastSi=-1;
+function render(p){
   progfill.style.width=(p*100)+'%';
   var fs=p*N,si=clamp(Math.floor(fs),0,N-1),local=fs-si,s=SC[si];
   if(si!==lastSi){lastSi=si;SB.startType(si);}
@@ -51,7 +69,7 @@ function render(){
     pitch:SB.reduced?0:lerp(s.p0,s.p1,cl)*pitchK,
     bearing:SB.reduced?0:lerp(s.b0,s.b1,cl)});
 }
-function onScroll(){if(!raf)raf=requestAnimationFrame(render);}
+function onScroll(){if(!animRaf)animRaf=requestAnimationFrame(animate);}
 SB.requestRender=onScroll;   // map.js ruft das nach dem Boot
 window.addEventListener('scroll',onScroll,{passive:true});
 window.addEventListener('resize',function(){computeSpeed();onScroll();});
