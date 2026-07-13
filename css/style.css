@@ -1,0 +1,181 @@
+/* ==========================================================================
+   SenfBahn Sonderzug – Styles
+   Reihenfolge: Basis → Topbar → Hero → Scrolly/Karte → Inhaltsblöcke →
+   RSVP → Extras (Toast, Musik, Trikot) → Mobile → Reduced Motion
+   ========================================================================== */
+
+:root{
+  --rot:#EC0016; --rot2:#C50014; --ink:#1B1F26; --grau:#646973;
+  --hell:#F0F1F2; --linie:#D7DCE1; --gruen:#63A615; --gelb:#FFD800;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);line-height:1.5;overflow-x:hidden;
+  -webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+
+/* ---- Topbar -------------------------------------------------------------- */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:12px;
+  padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
+  background:rgba(236,0,22,.92);backdrop-filter:blur(10px);color:#fff}
+.logo{background:#fff;color:var(--rot);font-weight:900;font-style:italic;font-size:1.15rem;padding:1px 10px;border-radius:4px;
+  cursor:pointer;user-select:none}
+#topbar .cl{font-size:.72rem;opacity:.95;flex:1}
+#ticker{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:4px 12px;text-align:right}
+#ticker .l{display:block;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+#ticker .v{font-size:1.05rem;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* ---- Hero ---------------------------------------------------------------- */
+#hero{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
+  padding:90px 20px 40px;background:linear-gradient(180deg,#fff 0%,#F4F1EE 100%);overflow:hidden}
+#hero .ey{font-size:.78rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--rot);margin-bottom:14px;opacity:0;animation:up .8s .1s forwards}
+#hero h1{font-size:clamp(2.5rem,8vw,5.4rem);font-weight:900;letter-spacing:-.03em;line-height:1.02;max-width:16ch;opacity:0;animation:up .8s .25s forwards}
+#hero h1 span{color:var(--rot)}
+#hero .sub{margin-top:20px;font-size:clamp(1rem,2.3vw,1.25rem);color:var(--grau);max-width:46ch;font-weight:600;opacity:0;animation:up .8s .45s forwards}
+#hero .kicker2{margin-top:10px;font-size:.85rem;font-weight:700;opacity:0;animation:up .8s .6s forwards}
+#hero .scrollhint{margin-top:44px;font-size:.8rem;color:var(--grau);opacity:0;animation:up .8s .8s forwards,hop 1.7s 1.2s ease-in-out infinite}
+@keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+.floaty{position:absolute;font-size:1.6rem;opacity:.5;animation:drift linear infinite;pointer-events:none}
+@keyframes drift{0%{transform:translateY(8vh) rotate(-8deg)}100%{transform:translateY(-110vh) rotate(14deg)}}
+
+/* ---- Scrolly / Karte ------------------------------------------------------ */
+#scrolly{position:relative}
+#stage{position:sticky;top:0;height:100svh;width:100%;overflow:hidden;background:#EFEDE8}
+#map{position:absolute;inset:0}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 95% at 50% 42%,transparent 58%,rgba(20,24,32,.28) 100%)}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink);font-weight:800;letter-spacing:.15em;text-transform:uppercase;font-size:.8rem;background:#EFEDE8;z-index:5;transition:opacity .6s}
+#loading.aus{opacity:0;pointer-events:none}
+#prog{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(27,31,38,.15);z-index:6}
+#prog i{display:block;height:100%;width:0;background:var(--rot)}
+
+#autoctl{position:absolute;right:calc(16px + env(safe-area-inset-right));bottom:20px;z-index:9;display:none;align-items:center;gap:8px}
+#autoctl button{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border:1.5px solid var(--linie);border-radius:999px;
+  font-family:inherit;font-weight:900;font-size:.85rem;padding:10px 18px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#autoctl .hint{font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+/* ---- Story-Karten ---------------------------------------------------------- */
+.scard{position:absolute;left:24px;bottom:56px;max-width:560px;z-index:7;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-radius:22px;padding:26px 28px;
+  box-shadow:0 24px 70px rgba(0,0,0,.32);opacity:0;transform:translateY(34px);pointer-events:none;will-change:opacity,transform}
+.scard .badge{display:inline-block;color:#fff;font-weight:900;font-size:.78rem;border-radius:6px;padding:4px 11px;margin-bottom:10px}
+.b-re{background:#646973}.b-tram{background:#0087B9}.b-ter{background:#4F7A28}.b-tgv{background:var(--rot)}.b-bus{background:#814997}.b-herz{background:#D6336C}
+.scard h2{font-size:clamp(1.6rem,3.8vw,2.35rem);font-weight:900;letter-spacing:-.02em;line-height:1.06;min-height:1.1em}
+.caret{display:inline-block;width:.55ch;border-bottom:4px solid var(--rot);transform:translateY(-2px);animation:blink .8s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.scard .witz{margin:12px 0;font-style:italic;font-size:1rem;border-left:4px solid var(--rot);padding:8px 12px;background:rgba(236,0,22,.06);border-radius:0 10px 10px 0}
+.scard .txt{font-size:1rem;line-height:1.55}
+.tw{opacity:0}
+.tw.an{opacity:1;transition:opacity .12s}
+.chips{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;opacity:0;transition:opacity .5s}
+.chips.an{opacity:1}
+.chip{font-size:.74rem;font-weight:800;background:var(--hell);border-radius:999px;padding:5px 11px}
+.kost{display:inline-block;margin-top:12px;font-weight:900;font-size:.9rem;border-radius:8px;padding:5px 13px;background:#FDE7E9;color:var(--rot2);opacity:0;transition:opacity .5s;transform:rotate(-1deg)}
+.kost.an{opacity:1}
+.kost.frei{background:#EAF4DE;color:#3F6B12}
+
+/* ---- Inhaltsblöcke --------------------------------------------------------- */
+section.block{padding:80px 20px}
+.wrap{max-width:960px;margin:0 auto}
+.bh{font-size:clamp(1.8rem,5vw,3rem);font-weight:900;letter-spacing:-.03em;text-align:center}
+.bs{color:var(--grau);text-align:center;max-width:54ch;margin:12px auto 34px;font-weight:600}
+.preis{background:#fff;border:1.5px solid var(--linie);border-radius:18px;padding:24px;overflow-x:auto;box-shadow:0 12px 40px rgba(27,31,38,.08)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:430px}
+th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--grau);border-bottom:2px solid var(--linie);padding:6px 8px}
+td{padding:9px 8px;border-bottom:1px solid var(--linie)}
+td.p{text-align:right;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+tr.frei td.p{color:#3F6B12}
+tr.summe td{border-top:3px double var(--ink);border-bottom:none;font-weight:900;font-size:1.05rem}
+.sparpreis{display:inline-block;background:var(--gelb);border-radius:4px;font-size:.66rem;font-weight:900;padding:2px 7px;margin-left:6px}
+.budgetbar{margin-top:16px;background:var(--hell);border-radius:999px;height:28px;position:relative;overflow:hidden}
+.budgetbar .fill{position:absolute;left:0;top:0;bottom:0;width:73%;background:var(--gruen);border-radius:999px}
+.budgetbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900}
+.hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.hcard{background:#fff;border:1.5px solid var(--linie);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(27,31,38,.06)}
+.hcard .ort{font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--rot);font-weight:900}
+.hcard h4{font-weight:900;margin:4px 0 6px}
+.hcard p{font-size:.84rem}
+.hcard .pr{font-weight:900;font-size:.85rem;margin-top:10px}
+.cb{background:var(--ink);color:#fff;border-radius:18px;padding:24px;margin-bottom:18px}
+.cb h4{font-weight:900;margin-bottom:8px}
+.cb p{font-size:.88rem;margin:.45em 0;opacity:.95}
+.cb b{color:var(--gelb)}
+.nullnull{background:linear-gradient(120deg,var(--rot),var(--rot2));color:#fff;border-radius:18px;padding:26px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.nullnull .prom{font-size:2.6rem;font-weight:900;font-style:italic}
+.nullnull p{font-size:.9rem;flex:1;min-width:230px}
+
+/* ---- RSVP ------------------------------------------------------------------ */
+#rsvp{position:relative;text-align:center;padding:100px 20px 120px;background:linear-gradient(180deg,#fff,#F4F1EE);overflow:hidden}
+#rsvp .ey{font-size:.78rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--rot)}
+#rsvp h3{font-size:clamp(2.2rem,7vw,4rem);font-weight:900;letter-spacing:-.03em;margin-top:10px}
+#rsvp p{color:var(--grau);margin:14px auto 26px;font-weight:600;max-width:46ch}
+.btnrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+button.rot{background:var(--rot);color:#fff;border:none;border-radius:14px;font-family:inherit;font-weight:900;font-size:1.05rem;padding:16px 30px;cursor:pointer;transition:transform .12s,background .15s}
+button.rot:hover{background:var(--rot2);transform:translateY(-2px) rotate(-.5deg)}
+button.rot.alt{background:var(--ink)}
+button.rot:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+#rsvp .fine{font-size:.7rem;color:var(--grau);margin-top:26px;line-height:1.8}
+#rsvpdone{display:none;margin-top:18px;font-weight:900;font-size:1.15rem}
+footer{background:var(--ink);color:#B7BEC6;font-size:.7rem;padding:22px 16px;text-align:center;line-height:1.7}
+footer b{color:#fff}
+.crumb{position:fixed;top:-50px;z-index:2000;font-size:1.6rem;animation:fall linear forwards;pointer-events:none}
+@keyframes fall{to{transform:translateY(115vh) rotate(320deg)}}
+
+/* ---- Musik-Umschalter (erscheint, sobald die Karte Frankreich erreicht) ----- */
+#musicbtn{display:none;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;
+  border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;font-size:1rem;line-height:1;
+  cursor:pointer;font-family:inherit;flex:0 0 auto;transition:background .15s,color .15s}
+#musicbtn.on{background:#fff;color:var(--rot)}
+#musicbtn.pulse{animation:mpulse 1.35s ease-in-out infinite}
+@keyframes mpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.55)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
+#toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-14px);z-index:1300;
+  background:rgba(27,31,38,.92);color:#fff;font-size:.8rem;font-weight:800;padding:8px 16px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#yt{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:.01;pointer-events:none;z-index:-1;border:0}
+
+/* ---- Reise-Trikot (Croissant du matin, tout va bien!) ----------------------- */
+.teewrap{max-width:340px;margin:8px auto 0;text-align:center}
+.tee{width:100%;height:auto;display:block;filter:drop-shadow(0 20px 44px rgba(27,31,38,.18))}
+.tee .shirt{fill:#fff;stroke:#E1E5E9;stroke-width:2}
+.tee .collar{fill:none;stroke:#E1E5E9;stroke-width:3}
+.tee .tag{fill:#AEB4BB;font:800 10px Inter,sans-serif;letter-spacing:.5px}
+.tee .teetxt{font-family:Georgia,'Times New Roman',serif;fill:var(--ink);font-weight:600;font-size:21px}
+.teecap{margin-top:16px;font-size:.82rem;color:var(--grau);font-weight:600}
+
+/* ---- Mobile ------------------------------------------------------------------
+   backdrop-filter:blur() über einer bewegten Karte ist DIE Ruckel-Ursache auf
+   Smartphones – hier bekommt jede geblurrte Fläche eine (fast) deckende Füllung. */
+@media (max-width:640px){
+  #topbar{padding:calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));
+    gap:8px;backdrop-filter:none;background:var(--rot)}
+  .logo{font-size:1rem}
+  #ticker{padding:3px 9px}
+  #ticker .v{font-size:.95rem}
+  #hero{padding:78px 18px 34px}
+  #hero .scrollhint{margin-top:32px}
+  .scard{left:10px;right:10px;bottom:calc(18px + env(safe-area-inset-bottom));max-width:none;padding:16px;
+    backdrop-filter:none;background:rgba(255,255,255,.97);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28)}
+  .scard h2{font-size:1.35rem}
+  .scard .badge{font-size:.72rem;margin-bottom:8px}
+  .scard .witz{font-size:.92rem;margin:9px 0}
+  .scard .txt{font-size:.9rem;line-height:1.5}
+  .scard .chips{margin-top:9px}
+  #topbar .cl{display:none}
+  #autoctl{right:calc(10px + env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom))}
+  #autoctl button{backdrop-filter:none;background:#fff;padding:11px 16px;font-size:.9rem}
+  section.block{padding:56px 16px}
+  .bs{margin-bottom:26px}
+  .preis{padding:16px}
+  #rsvp{padding:72px 18px 96px}
+  .btnrow{width:100%}
+  button.rot{width:100%;max-width:340px;padding:16px 24px}
+  .nullnull{padding:20px}
+  .nullnull .prom{font-size:2rem}
+}
+
+/* ---- Reduced Motion ---------------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  #hero .ey,#hero h1,#hero .sub,#hero .kicker2,#hero .scrollhint{opacity:1;transform:none}
+  .floaty,.crumb{display:none}
+}
