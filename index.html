@@ -14,7 +14,9 @@
     --hell:#F0F1F2; --linie:#D7DCE1; --gruen:#63A615; --gelb:#FFD800;
   }
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);line-height:1.5;overflow-x:hidden}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);line-height:1.5;overflow-x:hidden;
+    -webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
 
   #topbar{position:fixed;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:12px;padding:10px 16px;
     background:rgba(236,0,22,.92);backdrop-filter:blur(10px);color:#fff}
@@ -116,11 +118,32 @@
   @keyframes fall{to{transform:translateY(115vh) rotate(320deg)}}
 
   @media (max-width:640px){
-    .scard{left:12px;right:12px;bottom:34px;max-width:none;padding:18px}
-    .scard h2{font-size:1.4rem}
-    .scard .txt{font-size:.9rem}
+    /* backdrop-filter:blur() over a moving map is the #1 cause of scroll jank on
+       phones – swap every blurred surface for a solid/near-solid fill here. */
+    #topbar{padding:8px 12px;gap:8px;backdrop-filter:none;background:var(--rot)}
+    .logo{font-size:1rem}
+    #ticker{padding:3px 9px}
+    #ticker .v{font-size:.95rem}
+    #hero{padding:78px 18px 34px}
+    #hero .scrollhint{margin-top:32px}
+    .scard{left:10px;right:10px;bottom:calc(18px + env(safe-area-inset-bottom));max-width:none;padding:16px;
+      backdrop-filter:none;background:rgba(255,255,255,.97);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28)}
+    .scard h2{font-size:1.35rem}
+    .scard .badge{font-size:.72rem;margin-bottom:8px}
+    .scard .witz{font-size:.92rem;margin:9px 0}
+    .scard .txt{font-size:.9rem;line-height:1.5}
+    .scard .chips{margin-top:9px}
     #topbar .cl{display:none}
-    #autoctl{right:10px;bottom:16px}
+    #autoctl{right:10px;bottom:calc(14px + env(safe-area-inset-bottom))}
+    #autoctl button{backdrop-filter:none;background:#fff;padding:11px 16px;font-size:.9rem}
+    section.block{padding:56px 16px}
+    .bs{margin-bottom:26px}
+    .preis{padding:16px}
+    #rsvp{padding:72px 18px 96px}
+    .btnrow{width:100%}
+    button.rot{width:100%;max-width:340px;padding:16px 24px}
+    .nullnull{padding:20px}
+    .nullnull .prom{font-size:2rem}
   }
   @media (prefers-reduced-motion:reduce){
     *{animation:none!important}
@@ -225,14 +248,19 @@
 (function(){
   var EMAIL_AN = "DEINE-EMAIL@HIER-EINTRAGEN.de";
   var SCENE_VH = 260;
-  var AUTO_SEK_PRO_SZENE = 11;
+  var AUTO_SEK_PRO_SZENE = 12;
 
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Smartphone / low-power detection – drives every performance shortcut below.
+  var isMobile = window.matchMedia('(max-width:640px)').matches ||
+                 (('ontouchstart' in window) && Math.min(screen.width,screen.height) < 820);
+  var lowPower = isMobile || (navigator.hardwareConcurrency||8) <= 4;
 
   if(!reduced){
     ['#hero','#rsvp'].forEach(function(sel){
       var host=document.querySelector(sel), set=['🥐','🌿','🧈','🥖','🍲','🌿','🥐'];
-      for(var i=0;i<9;i++){
+      var FLOATY = isMobile?4:9;
+      for(var i=0;i<FLOATY;i++){
         var f=document.createElement('div');f.className='floaty';
         f.textContent=set[i%set.length];
         f.style.left=(5+Math.random()*90)+'%';f.style.bottom='-8vh';
@@ -375,22 +403,24 @@
   var loading=document.getElementById('loading');
   function boot(){
     if(typeof maplibregl==='undefined'){loading.textContent='Karte offline — bitte mit Internet öffnen. Der Rest fährt trotzdem.';return;}
+    var suf = isMobile ? '' : '@2x';   // plain tiles on phones = a quarter of the pixels to push
     map=new maplibregl.Map({container:'map',interactive:false,
-      pixelRatio:Math.min(window.devicePixelRatio||1,2),
+      pixelRatio:Math.min(window.devicePixelRatio||1, isMobile?1.5:2),
       center:R[0].slice(),zoom:11,pitch:0,bearing:0,
-      maxTileCacheSize:2048,fadeDuration:0,
+      maxTileCacheSize: isMobile?512:2048, fadeDuration:0, antialias:false,
       style:{version:8,sources:{carto:{type:'raster',tiles:[
-        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png'],
         tileSize:256,maxzoom:18,attribution:'© OpenStreetMap-Mitwirkende © CARTO'}},
       layers:[{id:'bg',type:'background',paint:{'background-color':'#EFEDE8'}},
         {id:'carto',type:'raster',source:'carto',paint:{'raster-fade-duration':0}}]}});
     map.on('load',function(){
-      try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
+      // 3D terrain is the single most expensive layer – skip it on phones / low-power devices.
+      if(!lowPower){try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
         tiles:['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
         tileSize:256,maxzoom:11});
-        map.setTerrain({source:'dem',exaggeration:1.7});}catch(e){}
+        map.setTerrain({source:'dem',exaggeration:1.5});}catch(e){}}
       map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:R}}});
       map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
       map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':'#EC0016','line-width':4,'line-dasharray':[2,1.4]}});
@@ -439,49 +469,76 @@
     coords.push(pos);
     map.getSource('done').setData({type:'Feature',geometry:{type:'LineString',coordinates:coords}});
     var cl=ease(local);
+    // Flatter camera on low-power = fewer visible tiles to fetch & rasterise.
+    var pitchK = lowPower?0.5:1;
     map.jumpTo({center:pos,zoom:lerp(s.z0,s.z1,cl),
-      pitch:reduced?0:lerp(s.p0,s.p1,cl),
+      pitch:reduced?0:lerp(s.p0,s.p1,cl)*pitchK,
       bearing:reduced?0:lerp(s.b0,s.b1,cl)});
   }
   function onScroll(){if(!raf)raf=requestAnimationFrame(render);}
   window.addEventListener('scroll',onScroll,{passive:true});
-  window.addEventListener('resize',onScroll);
+  window.addEventListener('resize',function(){computeSpeed();onScroll();});
 
-  var auto={engaged:false,on:false,pps:0};
+  // ---- Autopilot -----------------------------------------------------------
+  // Design goals after the mobile bug reports:
+  //  * engage after the FIRST scroll and then keep going on its own
+  //  * never fight the browser's touch/momentum scrolling (that made it look
+  //    dead on phones) – instead yield while the user is interacting and
+  //    resume automatically once things settle
+  //  * never lurch: cap the per-frame delta so a dropped frame can't turn into
+  //    a giant, fast jump
+  var auto={engaged:false,paused:false,pps:0,lastInput:0,raf:null};
   var ctl=document.getElementById('autoctl'),abtn=document.getElementById('autobtn');
+  var RESUME_DELAY=900;   // ms of no user input before autopilot takes over again
+  var MAX_DT=0.05;        // s – ignore stalls larger than this (anti-lurch)
+  function nowMs(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();}
   function computeSpeed(){
     var total=scrolly.getBoundingClientRect().height-window.innerHeight;
     auto.pps=total/(N*AUTO_SEK_PRO_SZENE);
   }
   var lastT=null;
   function aloop(ts){
-    if(!auto.on)return;
+    if(!auto.engaged){auto.raf=null;return;}
     if(lastT===null)lastT=ts;
     var dt=(ts-lastT)/1000;lastT=ts;
-    window.scrollBy(0,auto.pps*dt);
-    if(progress()>=1){setAuto(false);ctl.style.display='none';return;}
-    requestAnimationFrame(aloop);
+    if(dt>MAX_DT)dt=MAX_DT;
+    // Only advance when not paused and the user has been idle long enough that
+    // we aren't wrestling their finger / momentum scroll.
+    if(!auto.paused && (nowMs()-auto.lastInput)>RESUME_DELAY){
+      window.scrollBy(0,auto.pps*dt);
+      if(progress()>=0.999){setPaused(true);auto.raf=null;return;}  // end reached – stop the loop
+    }
+    auto.raf=requestAnimationFrame(aloop);
   }
-  function setAuto(on){
-    auto.on=on;lastT=null;
-    abtn.textContent=on?'⏸ Anhalten':'▶ Weiterfahrt';
-    if(on)requestAnimationFrame(aloop);
+  function setPaused(p){
+    auto.paused=p;
+    abtn.textContent=p?'▶ Weiterfahrt':'⏸ Anhalten';
   }
+  function noteInput(){auto.lastInput=nowMs();}
   function engage(){
     if(auto.engaged||reduced)return;
-    auto.engaged=true;computeSpeed();ctl.style.display='flex';setAuto(true);
+    auto.engaged=true;computeSpeed();ctl.style.display='flex';
+    lastT=null;auto.raf=requestAnimationFrame(aloop);
   }
   window.addEventListener('scroll',function(){
     var p=progress();
-    if(!auto.engaged&&p>0.005&&p<0.95)engage();
+    if(!auto.engaged&&p>0.004&&p<0.95)engage();
   },{passive:true});
-  ['wheel','touchstart'].forEach(function(ev){
-    window.addEventListener(ev,function(){if(auto.on)setAuto(false);},{passive:true});
+  // User input just pauses autopilot briefly; it resumes after RESUME_DELAY.
+  ['wheel','touchstart','touchmove'].forEach(function(ev){
+    window.addEventListener(ev,noteInput,{passive:true});
   });
   window.addEventListener('keydown',function(e){
-    if(auto.on&&['ArrowDown','ArrowUp','PageDown','PageUp',' '].indexOf(e.key)>-1)setAuto(false);
+    if(['ArrowDown','ArrowUp','PageDown','PageUp',' ','Home','End'].indexOf(e.key)>-1)noteInput();
   });
-  abtn.addEventListener('click',function(){setAuto(!auto.on);});
+  abtn.addEventListener('click',function(){
+    setPaused(!auto.paused);
+    if(!auto.paused){
+      auto.lastInput=0;                         // explicit resume → move right away
+      lastT=null;
+      if(!auto.raf)auto.raf=requestAnimationFrame(aloop);
+    }
+  });
 
   var booted=false;
   function maybeBoot(){var r=scrolly.getBoundingClientRect();
