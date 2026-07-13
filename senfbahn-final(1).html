@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenfBahn Sonderzug – Willst du mit mir verreisen?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,800;0,900;1,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+  :root{
+    --rot:#EC0016; --rot2:#C50014; --ink:#1B1F26; --grau:#646973;
+    --hell:#F0F1F2; --linie:#D7DCE1; --gruen:#63A615; --gelb:#FFD800;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);line-height:1.5;overflow-x:hidden}
+
+  #topbar{position:fixed;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:12px;padding:10px 16px;
+    background:rgba(236,0,22,.92);backdrop-filter:blur(10px);color:#fff}
+  .logo{background:#fff;color:var(--rot);font-weight:900;font-style:italic;font-size:1.15rem;padding:1px 10px;border-radius:4px}
+  #topbar .cl{font-size:.72rem;opacity:.95;flex:1}
+  #ticker{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:4px 12px;text-align:right}
+  #ticker .l{display:block;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+  #ticker .v{font-size:1.05rem;font-weight:900;font-variant-numeric:tabular-nums}
+
+  #hero{position:relative;min-height:100svh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
+    padding:90px 20px 40px;background:linear-gradient(180deg,#fff 0%,#F4F1EE 100%);overflow:hidden}
+  #hero .ey{font-size:.78rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--rot);margin-bottom:14px;opacity:0;animation:up .8s .1s forwards}
+  #hero h1{font-size:clamp(2.5rem,8vw,5.4rem);font-weight:900;letter-spacing:-.03em;line-height:1.02;max-width:16ch;opacity:0;animation:up .8s .25s forwards}
+  #hero h1 span{color:var(--rot)}
+  #hero .sub{margin-top:20px;font-size:clamp(1rem,2.3vw,1.25rem);color:var(--grau);max-width:46ch;font-weight:600;opacity:0;animation:up .8s .45s forwards}
+  #hero .kicker2{margin-top:10px;font-size:.85rem;font-weight:700;opacity:0;animation:up .8s .6s forwards}
+  #hero .scrollhint{margin-top:44px;font-size:.8rem;color:var(--grau);opacity:0;animation:up .8s .8s forwards,hop 1.7s 1.2s ease-in-out infinite}
+  @keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+  @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+  .floaty{position:absolute;font-size:1.6rem;opacity:.5;animation:drift linear infinite;pointer-events:none}
+  @keyframes drift{0%{transform:translateY(8vh) rotate(-8deg)}100%{transform:translateY(-110vh) rotate(14deg)}}
+
+  #scrolly{position:relative}
+  #stage{position:sticky;top:0;height:100svh;width:100%;overflow:hidden;background:#EFEDE8}
+  #map{position:absolute;inset:0}
+  #vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 95% at 50% 42%,transparent 58%,rgba(20,24,32,.28) 100%)}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink);font-weight:800;letter-spacing:.15em;text-transform:uppercase;font-size:.8rem;background:#EFEDE8;z-index:5;transition:opacity .6s}
+  #loading.aus{opacity:0;pointer-events:none}
+  #prog{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(27,31,38,.15);z-index:6}
+  #prog i{display:block;height:100%;width:0;background:var(--rot)}
+
+  #autoctl{position:absolute;right:16px;bottom:20px;z-index:9;display:none;align-items:center;gap:8px}
+  #autoctl button{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border:1.5px solid var(--linie);border-radius:999px;
+    font-family:inherit;font-weight:900;font-size:.85rem;padding:10px 18px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  #autoctl .hint{font-size:.65rem;font-weight:800;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+
+  .scard{position:absolute;left:24px;bottom:56px;max-width:560px;z-index:7;
+    background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-radius:22px;padding:26px 28px;
+    box-shadow:0 24px 70px rgba(0,0,0,.32);opacity:0;transform:translateY(34px);pointer-events:none;will-change:opacity,transform}
+  .scard .badge{display:inline-block;color:#fff;font-weight:900;font-size:.78rem;border-radius:6px;padding:4px 11px;margin-bottom:10px}
+  .b-re{background:#646973}.b-tram{background:#0087B9}.b-ter{background:#4F7A28}.b-tgv{background:var(--rot)}.b-bus{background:#814997}.b-herz{background:#D6336C}
+  .scard h2{font-size:clamp(1.6rem,3.8vw,2.35rem);font-weight:900;letter-spacing:-.02em;line-height:1.06;min-height:1.1em}
+  .caret{display:inline-block;width:.55ch;border-bottom:4px solid var(--rot);transform:translateY(-2px);animation:blink .8s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .scard .witz{margin:12px 0;font-style:italic;font-size:1rem;border-left:4px solid var(--rot);padding:8px 12px;background:rgba(236,0,22,.06);border-radius:0 10px 10px 0}
+  .scard .txt{font-size:1rem;line-height:1.55}
+  .tw{opacity:0}
+  .tw.an{opacity:1;transition:opacity .12s}
+  .chips{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;opacity:0;transition:opacity .5s}
+  .chips.an{opacity:1}
+  .chip{font-size:.74rem;font-weight:800;background:var(--hell);border-radius:999px;padding:5px 11px}
+  .kost{display:inline-block;margin-top:12px;font-weight:900;font-size:.9rem;border-radius:8px;padding:5px 13px;background:#FDE7E9;color:var(--rot2);opacity:0;transition:opacity .5s;transform:rotate(-1deg)}
+  .kost.an{opacity:1}
+  .kost.frei{background:#EAF4DE;color:#3F6B12}
+
+  section.block{padding:80px 20px}
+  .wrap{max-width:960px;margin:0 auto}
+  .bh{font-size:clamp(1.8rem,5vw,3rem);font-weight:900;letter-spacing:-.03em;text-align:center}
+  .bs{color:var(--grau);text-align:center;max-width:54ch;margin:12px auto 34px;font-weight:600}
+  .preis{background:#fff;border:1.5px solid var(--linie);border-radius:18px;padding:24px;overflow-x:auto;box-shadow:0 12px 40px rgba(27,31,38,.08)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:430px}
+  th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--grau);border-bottom:2px solid var(--linie);padding:6px 8px}
+  td{padding:9px 8px;border-bottom:1px solid var(--linie)}
+  td.p{text-align:right;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+  tr.frei td.p{color:#3F6B12}
+  tr.summe td{border-top:3px double var(--ink);border-bottom:none;font-weight:900;font-size:1.05rem}
+  .sparpreis{display:inline-block;background:var(--gelb);border-radius:4px;font-size:.66rem;font-weight:900;padding:2px 7px;margin-left:6px}
+  .budgetbar{margin-top:16px;background:var(--hell);border-radius:999px;height:28px;position:relative;overflow:hidden}
+  .budgetbar .fill{position:absolute;left:0;top:0;bottom:0;width:73%;background:var(--gruen);border-radius:999px}
+  .budgetbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900}
+  .hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+  .hcard{background:#fff;border:1.5px solid var(--linie);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(27,31,38,.06)}
+  .hcard .ort{font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--rot);font-weight:900}
+  .hcard h4{font-weight:900;margin:4px 0 6px}
+  .hcard p{font-size:.84rem}
+  .hcard .pr{font-weight:900;font-size:.85rem;margin-top:10px}
+  .cb{background:var(--ink);color:#fff;border-radius:18px;padding:24px;margin-bottom:18px}
+  .cb h4{font-weight:900;margin-bottom:8px}
+  .cb p{font-size:.88rem;margin:.45em 0;opacity:.95}
+  .cb b{color:var(--gelb)}
+  .nullnull{background:linear-gradient(120deg,var(--rot),var(--rot2));color:#fff;border-radius:18px;padding:26px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .nullnull .prom{font-size:2.6rem;font-weight:900;font-style:italic}
+  .nullnull p{font-size:.9rem;flex:1;min-width:230px}
+
+  #rsvp{position:relative;text-align:center;padding:100px 20px 120px;background:linear-gradient(180deg,#fff,#F4F1EE);overflow:hidden}
+  #rsvp .ey{font-size:.78rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--rot)}
+  #rsvp h3{font-size:clamp(2.2rem,7vw,4rem);font-weight:900;letter-spacing:-.03em;margin-top:10px}
+  #rsvp p{color:var(--grau);margin:14px auto 26px;font-weight:600;max-width:46ch}
+  .btnrow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  button.rot{background:var(--rot);color:#fff;border:none;border-radius:14px;font-family:inherit;font-weight:900;font-size:1.05rem;padding:16px 30px;cursor:pointer;transition:transform .12s,background .15s}
+  button.rot:hover{background:var(--rot2);transform:translateY(-2px) rotate(-.5deg)}
+  button.rot.alt{background:var(--ink)}
+  button.rot:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+  #rsvp .fine{font-size:.7rem;color:var(--grau);margin-top:26px;line-height:1.8}
+  #rsvpdone{display:none;margin-top:18px;font-weight:900;font-size:1.15rem}
+  footer{background:var(--ink);color:#B7BEC6;font-size:.7rem;padding:22px 16px;text-align:center;line-height:1.7}
+  footer b{color:#fff}
+  .crumb{position:fixed;top:-50px;z-index:2000;font-size:1.6rem;animation:fall linear forwards;pointer-events:none}
+  @keyframes fall{to{transform:translateY(115vh) rotate(320deg)}}
+
+  @media (max-width:640px){
+    .scard{left:12px;right:12px;bottom:34px;max-width:none;padding:18px}
+    .scard h2{font-size:1.4rem}
+    .scard .txt{font-size:.9rem}
+    #topbar .cl{display:none}
+    #autoctl{right:10px;bottom:16px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important}
+    #hero .ey,#hero h1,#hero .sub,#hero .kicker2,#hero .scrollhint{opacity:1;transform:none}
+    .floaty,.crumb{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">SB</div>
+  <div class="cl">Ein Trip, den ich uns ausgedacht habe.</div>
+  <div id="ticker"><span class="l">Fahrtkosten p. P.</span><span class="v" id="tv">0,00 €</span></div>
+</div>
+
+<section id="hero">
+  <div class="ey">Sonderzug SB 143 · nur ein Vorschlag</div>
+  <h1>Willst du mit mir <span>verreisen?</span></h1>
+  <p class="sub">Nürnberg → Elsass → Burgund. Etwa eine Woche, zwei Plätze. Ich hab's tatsächlich durchgerechnet.</p>
+  <div class="kicker2">Croissants sind eingeplant · der Rosmarin auch, frag nicht</div>
+  <div class="scrollhint">Einmal scrollen — dann läuft's von allein weiter ↓</div>
+</section>
+
+<div id="scrolly">
+  <div id="stage">
+    <div id="map"></div>
+    <div id="vignette"></div>
+    <div id="loading">Karte lädt …</div>
+    <div id="cards"></div>
+    <div id="autoctl"><span class="hint">Autopilot</span><button id="autobtn">⏸ Anhalten</button></div>
+    <div id="prog"><i id="progfill"></i></div>
+  </div>
+  <div id="spacer"></div>
+</div>
+
+<section class="block" style="background:var(--hell)"><div class="wrap">
+  <h3 class="bh">Der Kassenzettel.</h3>
+  <p class="bs">Nur die Zugtickets, pro Person, zusätzlich zum D-Ticket. Croissants kommen nochmal oben drauf, aber die zähl ich nicht mit.</p>
+  <div class="preis">
+    <table>
+      <thead><tr><th>Strecke</th><th>Produkt</th><th style="text-align:right">Preis</th></tr></thead>
+      <tbody>
+        <tr class="frei"><td>Nürnberg → Stuttgart → Karlsruhe → Offenburg → Kehl</td><td>RE / Regio (D-Ticket)</td><td class="p">0,00 €</td></tr>
+        <tr><td>Kehl Bahnhof → Straßburg</td><td>Tram D · CTS-Ticket</td><td class="p">2,00 €</td></tr>
+        <tr><td>Straßburg → Colmar → Turckheim &amp; zurück</td><td>TER-Tag Elsass</td><td class="p">12,00 €</td></tr>
+        <tr><td>Straßburg → Dijon <span class="sparpreis">Sparpreis</span></td><td>TGV direkt · 2 h 06</td><td class="p">29,00 €</td></tr>
+        <tr><td>Dijon ⇄ Beaune</td><td>TER Mobigo</td><td class="p">14,00 €</td></tr>
+        <tr><td>Dijon → Straßburg <span class="sparpreis">Sparpreis</span></td><td>TGV direkt · 2 h 06</td><td class="p">29,00 €</td></tr>
+        <tr><td>Straßburg → Kehl Bahnhof</td><td>Tram D · CTS-Ticket</td><td class="p">2,00 €</td></tr>
+        <tr class="frei"><td>Kehl → … → Nürnberg</td><td>RE / Regio (D-Ticket)</td><td class="p">0,00 €</td></tr>
+        <tr class="summe"><td colspan="2">Summe pro Person</td><td class="p">88,00 €</td></tr>
+      </tbody>
+    </table>
+    <div class="budgetbar"><div class="fill"></div><span>88 € von 120 € Budget · bleiben 32 € übrig, ungefähr eine Mini-Cocotte.</span></div>
+  </div>
+</div></section>
+
+<section class="block"><div class="wrap">
+  <h3 class="bh">Wo wir schlafen</h3>
+  <p class="bs">Da schlafen wir nochmal drüber — hier ein paar günstige Optionen, einfach nachgeschaut, nichts gesponsert.</p>
+  <div class="cb">
+    <h4>Der Spar-Fahrplan fürs Bett</h4>
+    <p><b>1. Corporate-Benefits-Portal checken</b> (Arbeitgeber / Hochschule): Deals für <b>Accor</b> (Ibis, Ibis Budget, Greet), <b>H-Hotels</b>, <b>HRS</b> &amp; Portale — oft 10–30 %.</p>
+    <p><b>2. Accor „ALL" gratis beitreten</b> → Member-Rate. Gegen den Benefits-Deal vergleichen; stapeln klappt selten, vergleichen immer.</p>
+    <p><b>3. HRS-Smarttarif</b> via Corporate Benefits: bis −30 % — genau unsere Ibis-/B&amp;B-Klasse.</p>
+    <p><b>4. Timing:</b> So–Do deutlich billiger. Und: <b>in Dijon schlafen, nach Beaune pendeln</b> — Beaune-Betten kosten Grand-Cru.</p>
+  </div>
+  <div class="hgrid">
+    <div class="hcard"><span class="ort">Straßburg · 1–2 Nächte</span><h4>Ibis Budget / B&amp;B an der Gare</h4><p>Null Meter Kofferschleppen. Sozial &amp; zentral: Jugendherberge <b>CIARUS</b>.</p><p class="pr">ca. 60–90 € / DZ / Nacht</p></div>
+    <div class="hcard"><span class="ort">Colmar · 1 Nacht</span><h4>Ibis Budget Colmar Centre</h4><p>Fußläufig zu Altstadt &amp; Bahnhof. Morgens Turckheim, mittags Cocotte, abends Winstub.</p><p class="pr">ca. 60–85 € / DZ / Nacht</p></div>
+    <div class="hcard"><span class="ort">Dijon · 3–4 Nächte</span><h4>Ibis Budget / B&amp;B / CIS Dijon</h4><p>Basislager Burgund. Geheimtipp: <b>CIS Dijon</b> (Ethic Étapes) für günstige Doppelzimmer.</p><p class="pr">ca. 55–85 € / DZ / Nacht</p></div>
+  </div>
+</div></section>
+
+<section class="block" style="padding-top:0"><div class="wrap">
+  <div class="nullnull">
+    <div class="prom">0,0 ‰</div>
+    <p><b>Nüchtern betrachtet die beste Reise:</b> In Beaune gibt's puren Traubensaft direkt vom Winzer, dazu Diabolo Cassis, heiße Schokolade in der Pâtisserie und die Senfmühlen-Tour bei Fallot — da brennt auch was. Legal. In der Nase.</p>
+  </div>
+</div></section>
+
+<section id="rsvp">
+  <div class="ey">Und jetzt im Ernst</div>
+  <h3>Kommst du mit?</h3>
+  <p>Ein Klick, und ich schreib dir direkt eine Mail dazu. Den Rest besprechen wir dann in echt.</p>
+  <div class="btnrow">
+    <button class="rot" id="ja1">Ja</button>
+    <button class="rot alt" id="ja2">Sehr gerne</button>
+  </div>
+  <div id="rsvpdone">Mail ist offen — einfach abschicken. Croissants merk ich mir.</div>
+  <p class="fine">Der Rosmarin reist trotzdem im Handgepäck. Frag mich einfach, warum.</p>
+</section>
+
+<footer>
+  Kartendaten © OpenStreetMap-Mitwirkende, © CARTO · Höhendaten: AWS Terrain Tiles · Preise ca., Stand Sommer 2026.<br>
+  Alles selbst zusammengesucht. Keine Werbung, kein Sponsoring — nur ich.
+</footer>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+(function(){
+  var EMAIL_AN = "DEINE-EMAIL@HIER-EINTRAGEN.de";
+  var SCENE_VH = 260;
+  var AUTO_SEK_PRO_SZENE = 11;
+
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if(!reduced){
+    ['#hero','#rsvp'].forEach(function(sel){
+      var host=document.querySelector(sel), set=['🥐','🌿','🧈','🥖','🍲','🌿','🥐'];
+      for(var i=0;i<9;i++){
+        var f=document.createElement('div');f.className='floaty';
+        f.textContent=set[i%set.length];
+        f.style.left=(5+Math.random()*90)+'%';f.style.bottom='-8vh';
+        f.style.animationDuration=(14+Math.random()*16)+'s';
+        f.style.animationDelay=(-Math.random()*20)+'s';
+        f.style.fontSize=(1.1+Math.random()*1.2)+'rem';
+        host.appendChild(f);
+      }
+    });
+  }
+
+  var R=[[11.0825,49.4456],[10.5719,49.3009],[10.0664,49.1367],[9.7550,49.1030],[9.4310,48.9466],[9.1829,48.7840],
+    [8.9600,48.9360],[8.7060,48.8940],[8.4009,48.9936],[8.2110,48.8586],[8.1907,48.7904],[8.0760,48.6260],[7.9466,48.4766],[7.8100,48.5732],
+    [7.7860,48.5760],[7.7455,48.5839],[7.4540,48.2597],[7.3468,48.0723],[7.2770,48.0870],[7.3468,48.0723],[7.3423,47.7418],[6.8990,47.5866],[5.9540,47.3080],[5.0272,47.3235],
+    [4.9300,47.1620],[4.8485,47.0230],[4.7522,46.9137],[4.4730,46.7550],[4.1110,46.4522],[4.0331,46.2726],
+    [4.1110,46.4522],[4.4730,46.7550],[4.7522,46.9137],[4.8485,47.0230],[5.0272,47.3235],
+    [5.9540,47.3080],[6.8990,47.5866],[7.3423,47.7418],[7.3468,48.0723],[7.7455,48.5839],[7.8100,48.5732],[7.9466,48.4766],[8.4009,48.9936],[9.1829,48.7840],[10.0664,49.1367],[11.0825,49.4456]];
+  function d(a,b){var dx=a[0]-b[0],dy=a[1]-b[1];return Math.sqrt(dx*dx+dy*dy);}
+  var cum=[0];for(var i=1;i<R.length;i++)cum[i]=cum[i-1]+d(R[i-1],R[i]);
+  var LEN=cum[cum.length-1];
+  function frac(idx){return cum[idx]/LEN;}
+  function pointAt(f){var t=f*LEN;
+    for(var i=1;i<cum.length;i++){if(cum[i]>=t){var lt=(t-cum[i-1])/Math.max(cum[i]-cum[i-1],1e-9);
+      return [R[i-1][0]+(R[i][0]-R[i-1][0])*lt,R[i-1][1]+(R[i][1]-R[i-1][1])*lt];}}
+    return R[R.length-1];}
+  var STOP_PTS=[R[0],R[5],R[8],R[12],R[13],R[15],R[17],R[18],R[23],R[25],R[29]];
+
+  var SC=[
+    {f0:frac(0),f1:frac(0),z0:11.8,z1:11.8,p0:0,p1:50,b0:0,b1:18,cost:0,badge:"SB 143",cls:"b-herz",
+     t:"Nürnberg Hbf",w:"„Okay. Zeit für die eigentliche Frage.“",
+     x:"Zwei Plätze, auf deinem liegt ein Croissant. Kurz gesagt: Das hier ist meine Art, dich zu fragen, ob du mitkommst — durchs Elsass und ins Burgund, mit dem Zug, ungefähr eine Woche.",
+     k:"0,00 € · D-Ticket",frei:true,ch:["Croissant liegt schon bereit","Rosmarin ist eingepackt"]},
+    {f0:frac(0),f1:frac(5),z0:11.8,z1:8.4,p0:50,p1:48,b0:18,b1:-12,cost:0,badge:"RE 90",cls:"b-re",
+     t:"Quer durch Franken",w:"„Der RE 90 hält überall. Wirklich überall. Auch emotional.“",
+     x:"Ansbach, Crailsheim, Schwäbisch Hall. Drei Stunden, null Euro, ein geteilter Kopfhörer. Die Landschaft: mittelschön. Die Gesellschaft: <b>erstklassig.</b>",k:"0,00 € · D-Ticket",frei:true},
+    {f0:frac(5),f1:frac(13),z0:8.4,z1:9.4,p0:48,p1:54,b0:-12,b1:22,cost:0,badge:"RE/IRE",cls:"b-re",
+     t:"Stuttgart → Kehl",w:"„In Kehl endet Deutschland. Kehl-mal drüber nach.“",
+     x:"Karlsruhe, Baden-Baden, Offenburg — alles noch gratis. In Kehl heißt es aussteigen, ab da gilt das D-Ticket nicht mehr. Die 2 € für Frankreich übernehm ich.",k:"0,00 € · D-Ticket",frei:true},
+    {f0:frac(13),f1:frac(15),z0:9.4,z1:12.4,p0:54,p1:56,b0:22,b1:55,cost:2,badge:"TRAM D",cls:"b-tram",
+     t:"Über den Rhein: Straßburg",w:"„Grenzüberschreitend gut — ein Tram-Traum.“",
+     x:"CTS-Ticket am Automaten, <b>vor jedem Einsteigen validieren!</b> Abends Flammkuchen bei <b>Binchstub</b>, Klassiker im <b>Au Pont du Corbeau</b>. Morgens: Zebra-Pain-au-Chocolat bei <b>Plein la Moustache</b>, gegessen am Kanal, Schulter an Schulter.",
+     k:"+ 2,00 € · Tram D",ch:["Plein la Moustache","Au Pont du Corbeau","Ibis Budget Gare"]},
+    {f0:frac(15),f1:frac(18),z0:12.4,z1:11.0,p0:56,p1:54,b0:55,b1:12,cost:12,badge:"TER",cls:"b-ter",
+     t:"Colmar & Turckheim: Cocotte-Tag",w:"„Hier geht die Cocotte ab. Gusseisen: der einzige harte Stoff an Bord.“",
+     x:"<b>Staub-Store</b>, 5 min vom Bahnhof Turckheim (Mo–Sa ~9–18:30). Größte Cocotte-Auswahl der Welt. Vorher Butter <i>à la motte</i> im Marché Couvert — und ja, wir kaufen den Rosmarin-Topf. Du weißt, warum.",
+     k:"+ 12,00 € · TER-Tag",ch:["Beurre de baratte","Rosmarin-Beschaffung","Staub-Store"]},
+    {f0:frac(18),f1:frac(23),z0:11.0,z1:8.0,p0:54,p1:48,b0:12,b1:-32,cost:29,badge:"TGV",cls:"b-tgv",
+     t:"Mit 320 km/h nach Dijon",w:"„TGV: Très Günstige Verbindung. Wer spät bucht: Très Gierige Verbindung.“",
+     x:"Links heben sich die Vogesen aus der Karte (echtes 3D — einmal winken bitte). 2 h 06, direkt, ab 29 € bei Frühbuchung. Zeit genug, um Händchen zu halten und so zu tun, als wäre das wegen der Kurvenlage.",k:"+ 29,00 € · Sparpreis"},
+    {f0:frac(23),f1:frac(23),z0:8.0,z1:12.4,p0:48,p1:56,b0:-32,b1:-64,cost:0,badge:"DIJON",cls:"b-tgv",
+     t:"Dijon: Hauptquartier",w:"„Senfsationell hier.“",
+     x:"<b>Les Halles</b> (Di/Do/Fr/Sa vormittags): Mittag an der Markttheke neben den Standbesitzern. Senf bei <b>Fallot</b> &amp; <b>Maille</b>, Lebkuchen bei <b>Mulot &amp; Petitjean</b> (seit 1796). Früh am Morgen: <b>Du Pain Pour Demain</b> — beste Boulangerie Frankreichs 2019. Wir teilen. Vielleicht.",
+     k:"0,00 € · zu Fuß, Ehrensache",frei:true,ch:["Du Pain Pour Demain","Place Émile Zola","CIS Dijon"]},
+    {f0:frac(23),f1:frac(25),z0:12.4,z1:11.0,p0:56,p1:54,b0:-64,b1:-26,cost:14,badge:"TER",cls:"b-ter",
+     t:"Beaune-jour!",w:"„Und zum Essen: Beaune Appétit.“",
+     x:"Samstags: Markt mit ~180 Ständen. <b>Moutarderie Fallot</b>-Tour — Burgunds letzte unabhängige Senfmühle. Statt Wein: <b>jus de raisin direkt vom Winzer</b> + Diabolo Cassis. Anstoßen geht auch mit Traubensaft.",
+     k:"+ 14,00 € · Dijon ⇄ Beaune",ch:["Jus de raisin","Œufs en meurette","Époisses (mutig!)"]},
+    {f0:frac(25),f1:frac(29),z0:11.0,z1:10.2,p0:54,p1:52,b0:-26,b1:8,cost:0,badge:"BUS+TER",cls:"b-bus",
+     t:"Bonus: Marcigny (2-Wochen-Version)",w:"„Emile Henry, −35 bis −40 %: der reinste Ton-Gewinn.“",
+     x:"Werksverkauf des Keramik-Königs seit 1850. <b>Di &amp; So geschlossen!</b> Ab hier wird der Rucksack philosophisch: Was wiegt schwerer — Keramik oder Verzicht? (Es ist die Keramik. Ich trage sie.)",k:"optional · ~25 € extra",frei:true},
+    {f0:frac(29),f1:frac(45),z0:10.2,z1:7.4,p0:52,p1:42,b0:8,b1:0,cost:31,badge:"TGV+TRAM+RE",cls:"b-tgv",
+     t:"Heimfahrt",w:"„Zug endet hier. Wie unsere Ausreden.“",
+     x:"TGV zurück (29 €), Tram nach Kehl (2 €), ab da <b>0 € bis Nürnberg</b>. Im Gepäck: Senf, Butter, Lebkuchen, vermutlich 4 kg Gusseisen und ein Topf Rosmarin.",
+     k:"+ 31,00 € · und heim",ch:["Gepäck: spürbar schwerer als hin","Rosmarin hat überlebt"]}
+  ];
+  var N=SC.length;
+  document.getElementById('spacer').style.height=(N*SCENE_VH)+'vh';
+
+  var cardsBox=document.getElementById('cards');
+  SC.forEach(function(s,i){
+    var el=document.createElement('div');el.className='scard';el.id='card'+i;
+    var chips=s.ch?'<div class="chips">'+s.ch.map(function(c){return '<span class="chip">'+c+'</span>'}).join('')+'</div>':'';
+    el.innerHTML='<span class="badge '+s.cls+'">'+s.badge+'</span>'+
+      '<h2><span class="h2t"></span><span class="caret"></span></h2>'+
+      '<div class="witz">'+s.w+'</div><div class="txt">'+s.x+'</div>'+chips+
+      '<span class="kost'+(s.frei?' frei':'')+'">'+s.k+'</span>';
+    cardsBox.appendChild(el);
+    ['.witz','.txt'].forEach(function(sel){
+      var box=el.querySelector(sel);
+      (function wrap(node){
+        Array.prototype.slice.call(node.childNodes).forEach(function(ch){
+          if(ch.nodeType===3){
+            var fragment=document.createDocumentFragment();
+            ch.textContent.split(/(\s+)/).forEach(function(tok){
+              if(tok.trim()===''){fragment.appendChild(document.createTextNode(tok));}
+              else{var sp=document.createElement('span');sp.className='tw';sp.textContent=tok;fragment.appendChild(sp);}
+            });
+            node.replaceChild(fragment,ch);
+          } else if(ch.nodeType===1){wrap(ch);}
+        });
+      })(box);
+    });
+  });
+
+  var typeTimers=[];
+  function clearType(){typeTimers.forEach(clearTimeout);typeTimers=[];}
+  function startType(i){
+    clearType();
+    var el=document.getElementById('card'+i),s=SC[i];
+    var h=el.querySelector('.h2t'),caret=el.querySelector('.caret');
+    h.textContent='';caret.style.display='inline-block';
+    el.querySelectorAll('.tw').forEach(function(w){w.classList.remove('an')});
+    el.querySelector('.chips')&&el.querySelector('.chips').classList.remove('an');
+    el.querySelector('.kost').classList.remove('an');
+    if(reduced){ h.textContent=s.t;caret.style.display='none';
+      el.querySelectorAll('.tw').forEach(function(w){w.classList.add('an')});
+      el.querySelector('.chips')&&el.querySelector('.chips').classList.add('an');
+      el.querySelector('.kost').classList.add('an');return;}
+    var title=s.t,ci=0;
+    (function tick(){
+      if(ci<=title.length){h.textContent=title.slice(0,ci);ci++;typeTimers.push(setTimeout(tick,34));}
+      else{caret.style.display='none';words();}
+    })();
+    function words(){
+      var ws=el.querySelectorAll('.tw'),wi=0;
+      (function wtick(){
+        if(wi<ws.length){ws[wi].classList.add('an');wi++;typeTimers.push(setTimeout(wtick,42));}
+        else{
+          typeTimers.push(setTimeout(function(){
+            el.querySelector('.chips')&&el.querySelector('.chips').classList.add('an');
+            el.querySelector('.kost').classList.add('an');
+          },250));
+        }
+      })();
+    }
+  }
+
+  function emojiImage(emoji,size){
+    var c=document.createElement('canvas');c.width=size;c.height=size;
+    var x=c.getContext('2d');
+    x.font=(size*0.8)+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    x.textAlign='center';x.textBaseline='middle';
+    x.shadowColor='rgba(0,0,0,.35)';x.shadowBlur=size*0.06;x.shadowOffsetY=size*0.05;
+    x.fillText(emoji,size/2,size/2+size*0.03);
+    return x.getImageData(0,0,size,size);
+  }
+
+  var map=null,ready=false;
+  var tv=document.getElementById('tv'),progfill=document.getElementById('progfill');
+  var loading=document.getElementById('loading');
+  function boot(){
+    if(typeof maplibregl==='undefined'){loading.textContent='Karte offline — bitte mit Internet öffnen. Der Rest fährt trotzdem.';return;}
+    map=new maplibregl.Map({container:'map',interactive:false,
+      pixelRatio:Math.min(window.devicePixelRatio||1,2),
+      center:R[0].slice(),zoom:11,pitch:0,bearing:0,
+      maxTileCacheSize:2048,fadeDuration:0,
+      style:{version:8,sources:{carto:{type:'raster',tiles:[
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
+        tileSize:256,maxzoom:18,attribution:'© OpenStreetMap-Mitwirkende © CARTO'}},
+      layers:[{id:'bg',type:'background',paint:{'background-color':'#EFEDE8'}},
+        {id:'carto',type:'raster',source:'carto',paint:{'raster-fade-duration':0}}]}});
+    map.on('load',function(){
+      try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
+        tiles:['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
+        tileSize:256,maxzoom:11});
+        map.setTerrain({source:'dem',exaggeration:1.7});}catch(e){}
+      map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:R}}});
+      map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
+      map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':'#EC0016','line-width':4,'line-dasharray':[2,1.4]}});
+      map.addSource('done',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[R[0],R[0]]}}});
+      map.addLayer({id:'done',type:'line',source:'done',paint:{'line-color':'#FFD800','line-width':5}});
+      map.addSource('stops',{type:'geojson',data:{type:'FeatureCollection',features:STOP_PTS.map(function(p){return {type:'Feature',geometry:{type:'Point',coordinates:p}}})}});
+      map.addLayer({id:'stops-o',type:'circle',source:'stops',paint:{'circle-radius':8,'circle-color':'#EC0016'}});
+      map.addLayer({id:'stops-i',type:'circle',source:'stops',paint:{'circle-radius':4,'circle-color':'#fff'}});
+      map.addImage('zug',emojiImage('🚆',96),{pixelRatio:2});
+      map.addSource('train',{type:'geojson',data:{type:'Feature',geometry:{type:'Point',coordinates:R[0]}}});
+      map.addLayer({id:'train',type:'symbol',source:'train',layout:{'icon-image':'zug','icon-size':0.62,'icon-allow-overlap':true,'icon-ignore-placement':true}});
+      ready=true;loading.classList.add('aus');onScroll();
+    });
+    map.on('error',function(){});
+  }
+
+  var scrolly=document.getElementById('scrolly');
+  var raf=null,lastSi=-1;
+  function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+  function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function progress(){
+    var rect=scrolly.getBoundingClientRect(),vh=window.innerHeight;
+    return clamp(-rect.top/Math.max(rect.height-vh,1),0,1);
+  }
+  function render(){
+    raf=null;
+    var p=progress();
+    progfill.style.width=(p*100)+'%';
+    var fs=p*N,si=clamp(Math.floor(fs),0,N-1),local=fs-si,s=SC[si];
+    if(si!==lastSi){lastSi=si;startType(si);}
+    for(var i=0;i<N;i++){
+      var el=document.getElementById('card'+i);
+      if(i!==si){el.style.opacity=0;el.style.transform='translateY(34px)';continue;}
+      var o=local<.05?local/.05:(local>.93?(1-local)/.07:1);
+      el.style.opacity=o;el.style.transform='translateY('+((1-o)*34)+'px)';
+    }
+    var sum=0;for(var j=0;j<si;j++)sum+=SC[j].cost;if(local>.5)sum+=s.cost;
+    tv.textContent=sum.toFixed(2).replace('.',',')+' €';
+    if(!ready)return;
+    var tt=ease(clamp(local/.7,0,1));
+    var f=lerp(s.f0,s.f1,tt),pos=pointAt(f);
+    map.getSource('train').setData({type:'Feature',geometry:{type:'Point',coordinates:pos}});
+    var t=f*LEN,coords=[R[0]];
+    for(var k=1;k<cum.length;k++){if(cum[k]<=t)coords.push(R[k]);else break;}
+    coords.push(pos);
+    map.getSource('done').setData({type:'Feature',geometry:{type:'LineString',coordinates:coords}});
+    var cl=ease(local);
+    map.jumpTo({center:pos,zoom:lerp(s.z0,s.z1,cl),
+      pitch:reduced?0:lerp(s.p0,s.p1,cl),
+      bearing:reduced?0:lerp(s.b0,s.b1,cl)});
+  }
+  function onScroll(){if(!raf)raf=requestAnimationFrame(render);}
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);
+
+  var auto={engaged:false,on:false,pps:0};
+  var ctl=document.getElementById('autoctl'),abtn=document.getElementById('autobtn');
+  function computeSpeed(){
+    var total=scrolly.getBoundingClientRect().height-window.innerHeight;
+    auto.pps=total/(N*AUTO_SEK_PRO_SZENE);
+  }
+  var lastT=null;
+  function aloop(ts){
+    if(!auto.on)return;
+    if(lastT===null)lastT=ts;
+    var dt=(ts-lastT)/1000;lastT=ts;
+    window.scrollBy(0,auto.pps*dt);
+    if(progress()>=1){setAuto(false);ctl.style.display='none';return;}
+    requestAnimationFrame(aloop);
+  }
+  function setAuto(on){
+    auto.on=on;lastT=null;
+    abtn.textContent=on?'⏸ Anhalten':'▶ Weiterfahrt';
+    if(on)requestAnimationFrame(aloop);
+  }
+  function engage(){
+    if(auto.engaged||reduced)return;
+    auto.engaged=true;computeSpeed();ctl.style.display='flex';setAuto(true);
+  }
+  window.addEventListener('scroll',function(){
+    var p=progress();
+    if(!auto.engaged&&p>0.005&&p<0.95)engage();
+  },{passive:true});
+  ['wheel','touchstart'].forEach(function(ev){
+    window.addEventListener(ev,function(){if(auto.on)setAuto(false);},{passive:true});
+  });
+  window.addEventListener('keydown',function(e){
+    if(auto.on&&['ArrowDown','ArrowUp','PageDown','PageUp',' '].indexOf(e.key)>-1)setAuto(false);
+  });
+  abtn.addEventListener('click',function(){setAuto(!auto.on);});
+
+  var booted=false;
+  function maybeBoot(){var r=scrolly.getBoundingClientRect();
+    if(!booted&&r.top<window.innerHeight*1.6){booted=true;boot();}}
+  window.addEventListener('scroll',maybeBoot,{passive:true});
+  maybeBoot();
+
+  function mailtoUrl(variante){
+    var subject=variante+' — ich komm mit';
+    var body=[
+      'Hi,','',
+      variante+', ich komm mit.','',
+      'Zwei, drei Sachen noch:',
+      '- Fensterplatz teilen wir uns, nicht abtreten',
+      '- der Rosmarin fährt mit, ohne Diskussion',
+      '- Croissants bitte nicht nur am ersten Tag','',
+      'Sag mir, wann du die TGV-Tickets buchen willst.','',
+      'Bis dann'
+    ].join('\n');
+    return 'mailto:'+encodeURIComponent(EMAIL_AN)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  }
+  function feiern(variante){
+    document.getElementById('ja1').style.display='none';
+    document.getElementById('ja2').style.display='none';
+    document.getElementById('rsvpdone').style.display='block';
+    if(!reduced){
+      var icons=['🥐','🌿','🧈','🥖','🍲','🧃','🥐','🌿'];
+      for(var i=0;i<34;i++){(function(i){setTimeout(function(){
+        var c=document.createElement('div');c.className='crumb';
+        c.textContent=icons[Math.floor(Math.random()*icons.length)];
+        c.style.left=(Math.random()*96)+'vw';
+        c.style.animationDuration=(2.2+Math.random()*2.6)+'s';
+        document.body.appendChild(c);setTimeout(function(){c.remove()},5600);
+      },i*90)})(i);}
+    }
+    setTimeout(function(){window.location.href=mailtoUrl(variante);},700);
+  }
+  document.getElementById('ja1').addEventListener('click',function(){feiern('Ja')});
+  document.getElementById('ja2').addEventListener('click',function(){feiern('Sehr gerne')});
+})();
+</script>
+</body>
+</html>
