@@ -1,34 +1,33 @@
 /* ==========================================================================
-   Schlemmer Bahn – Musik: „La vie en rose" (Zaz) am Rheinübergang
-   Braucht: js/data.js (SB.config.YT_ID), js/ui.js (SB.showToast),
-            js/story.js (SB.autopilot.hold)
-   Stellt bereit: SB.music.reachFrance()
+   Engine – Musik am Meilenstein (optional)
+   Liest trip.music: { ytId, label, volume, triggerScene, gate:{flag,title,
+   text,go,skip} }. Fehlt trip.music, tut dieses Modul nichts (SB.music=null)
+   und der ♪-Knopf bleibt unsichtbar — der Trip funktioniert ohne Musik.
+   Der Dialog (#francegate) wird hier dynamisch erzeugt, nicht in index.html.
 
-   Autoplay-Strategie:
-   Browser erlauben unmutierten Ton nur nach einer „aktivierenden" Geste —
-   und bei einem eingebetteten, plattformfremden YouTube-Player (der Ton läuft
-   im iFrame, gesteuert per postMessage) verlangen manche Browser, dass genau
-   DIESER Aufruf noch synchron innerhalb eines echten Klick-Handlers passiert.
-   Ein früh „geprimtes" Scrollen/Wischen reicht dafür nicht zuverlässig überall.
-
-   Deshalb: sobald der Zug Frankreich erreicht, erscheint ein kurzer, klarer
-   Dialog („Wir überqueren den Rhein.“). Der Klick auf „Musik an & weiter" ist
-   eine echte, frische Geste direkt am Button — das funktioniert in jedem
-   Browser zuverlässig. Danach wird die Lautstärke sanft von 0 hochgefadet,
-   kein harter Einsatz. Autopilot & Scrollen pausieren, solange der Dialog
-   offen ist, und laufen beim Schließen genau da weiter, wo sie waren.
+   Warum ein Dialog? Browser erlauben unmutierten Ton nur nach einer echten
+   Geste, und beim eingebetteten YouTube-Player (Ton läuft im iFrame, per
+   postMessage gesteuert) verlangen manche Browser den play()-Aufruf synchron
+   IM Klick-Handler. Ein Klick auf einen sichtbaren Button ist der einzige
+   Weg, der überall zuverlässig funktioniert. Danach wird die Lautstärke
+   sanft von 0 hochgefadet. Autopilot & Scrollen pausieren, solange der
+   Dialog offen ist, und laufen beim Schließen genau dort weiter.
    ========================================================================== */
 (function(){
 'use strict';
 var SB=window.SB;
-var cfg=SB.config;
-var TARGET_VOL=65;
+var M=SB.trip.music;
 var musicbtn=document.getElementById('musicbtn');
-var gate=document.getElementById('francegate');
-var gateGo=document.getElementById('fgate-go'),gateSkip=document.getElementById('fgate-skip');
+if(!M){SB.music=null;return;}
+
+var TARGET_VOL=M.volume||65;
+if(musicbtn){
+  musicbtn.title=M.label||'Musik';
+  musicbtn.setAttribute('aria-label','Musik an/aus: '+(M.label||''));
+}
 
 var ytPlayer=null,ytReady=false,apiRequested=false;
-var wantMusic=false,franceHit=false,playing=false,pendingPlay=false;
+var wantMusic=false,hit=false,playing=false,pendingPlay=false;
 var fadeTimer=null;
 
 /* Lautstärke in kleinen Schritten auf `to` bringen statt hart zu springen. */
@@ -53,8 +52,8 @@ function loadAPI(){
 }
 window.onYouTubeIframeAPIReady=function(){
   if(ytPlayer)return;
-  ytPlayer=new YT.Player('yt',{videoId:cfg.YT_ID,
-    playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,modestbranding:1,loop:1,playlist:cfg.YT_ID},
+  ytPlayer=new YT.Player('yt',{videoId:M.ytId,
+    playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,modestbranding:1,loop:1,playlist:M.ytId},
     events:{
       onReady:function(){
         ytReady=true;
@@ -97,7 +96,27 @@ function resumeWithFadeIn(){
   fadeVolume(TARGET_VOL,1800);
 }
 
-/* ---- Frankreich-Gate: Dialog, Scroll-/Autopilot-Sperre ------------------------ */
+/* ---- Meilenstein-Dialog: dynamisch erzeugt, Scroll-/Autopilot-Sperre ---------- */
+var G=M.gate||{};
+var gate=document.createElement('div');
+gate.id='francegate';
+gate.setAttribute('role','dialog');
+gate.setAttribute('aria-modal','true');
+gate.setAttribute('aria-labelledby','fgate-h');
+gate.setAttribute('aria-hidden','true');
+gate.innerHTML=
+  '<div class="fgate-card">'+
+    (G.flag?'<div class="fgate-flag">'+G.flag+'</div>':'')+
+    '<h4 id="fgate-h">'+(G.title||'')+'</h4>'+
+    (G.text?'<p>'+G.text+'</p>':'')+
+    '<div class="fgate-actions">'+
+      '<button id="fgate-go" class="rot" type="button">'+(G.go||'♪ Musik an')+'</button>'+
+      '<button id="fgate-skip" type="button" class="fgate-skip">'+(G.skip||'Ohne Musik weiter')+'</button>'+
+    '</div>'+
+  '</div>';
+document.body.appendChild(gate);
+var gateGo=document.getElementById('fgate-go'),gateSkip=document.getElementById('fgate-skip');
+
 var gateOpen=false;
 function blockScroll(e){if(gateOpen)e.preventDefault();}
 function blockScrollKeys(e){
@@ -109,30 +128,28 @@ window.addEventListener('touchmove',blockScroll,{passive:false});
 window.addEventListener('keydown',blockScrollKeys);
 
 function openGate(){
-  if(!gate)return;
   gateOpen=true;
   gate.classList.add('show');
   gate.setAttribute('aria-hidden','false');
   SB.autopilot&&SB.autopilot.hold(true);
-  if(gateGo)gateGo.focus();
+  gateGo.focus();
 }
 function closeGate(){
-  if(!gate)return;
   gateOpen=false;
   gate.classList.remove('show');
   gate.setAttribute('aria-hidden','true');
   SB.autopilot&&SB.autopilot.hold(false);
 }
-if(gateGo)gateGo.addEventListener('click',function(){closeGate();startWithFadeIn();});
-if(gateSkip)gateSkip.addEventListener('click',closeGate);
-if(gate){
-  gate.addEventListener('click',function(e){if(e.target===gate)closeGate();});   // Klick auf Backdrop
-  gate.addEventListener('keydown',function(e){if(e.key==='Escape')closeGate();});
-}
+gateGo.addEventListener('click',function(){closeGate();startWithFadeIn();});
+gateSkip.addEventListener('click',closeGate);
+gate.addEventListener('click',function(e){if(e.target===gate)closeGate();});   // Klick auf Backdrop
+gate.addEventListener('keydown',function(e){if(e.key==='Escape')closeGate();});
 
+/* ---- Öffentliche Schnittstelle: story.js meldet jede Szene ---------------------- */
 SB.music={
-  reachFrance:function(){
-    if(franceHit)return;franceHit=true;
+  onScene:function(si){
+    if(hit||si<M.triggerScene)return;
+    hit=true;
     if(musicbtn)musicbtn.style.display='inline-flex';
     openGate();
   }

@@ -1,7 +1,7 @@
 /* ==========================================================================
-   Schlemmer Bahn – Scrollytelling: Render-Loop & Autopilot
-   Braucht: data.js (Szenen/Route), ui.js (startType), map.js (mapCtl),
-            music.js (SB.music.reachFrance)
+   Engine – Scrollytelling: Render-Loop & Autopilot
+   Braucht: core/trip (Szenen/Route/Config), ui.js (startType),
+            map.js (mapCtl), music.js (SB.music, optional)
    ========================================================================== */
 (function(){
 'use strict';
@@ -44,7 +44,7 @@ function render(p){
   progfill.style.width=(p*100)+'%';
   var fs=p*N,si=clamp(Math.floor(fs),0,N-1),local=fs-si,s=SC[si];
   if(si!==lastSi){lastSi=si;SB.startType(si);}
-  if(si>=cfg.FRANCE_SCENE)SB.music.reachFrance();   // Rheinübergang → „La vie en rose"
+  if(SB.music)SB.music.onScene(si);   // Musik-Meilenstein (falls der Trip einen hat)
   for(var i=0;i<N;i++){
     var el=document.getElementById('card'+i);
     if(i!==si){el.style.opacity=0;el.style.transform='translateY(34px)';continue;}
@@ -52,7 +52,7 @@ function render(p){
     el.style.opacity=o;el.style.transform='translateY('+((1-o)*34)+'px)';
   }
   var sum=0;for(var j=0;j<si;j++)sum+=SC[j].cost;if(local>.5)sum+=s.cost;
-  tv.textContent=sum.toFixed(2).replace('.',',')+' €';
+  tv.textContent=SB.fmtEUR(sum);
   if(!SB.mapCtl.ready)return;
   var map=SB.mapCtl.map;
   var tt=ease(clamp(local/.7,0,1));
@@ -90,7 +90,7 @@ var externalHold=false; // von außen angehalten (z. B. Frankreich-Dialog offen)
 function nowMs(){return (typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();}
 function computeSpeed(){
   var total=scrolly.getBoundingClientRect().height-window.innerHeight;
-  auto.pps=total/(N*cfg.AUTO_SEK_PRO_SZENE);
+  auto.pps=total/(N*cfg.autoSecPerScene);
 }
 var lastT=null,lastY=null;
 function aloop(ts){

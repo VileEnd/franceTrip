@@ -1,12 +1,20 @@
 /* ==========================================================================
-   Schlemmer Bahn – Karte (MapLibre): Boot, Layer, Zug-Icon
-   Braucht: js/data.js (SB.route, SB.isMobile, SB.lowPower)
+   Engine – Karte (MapLibre): Boot, Layer, Zug-Icon
+   Liest trip.map (alle Felder optional): trainEmoji, routeColor, doneColor,
+   stopColor, bg, terrain:false. Route & Halte kommen aus SB.route.
    Stellt bereit: SB.mapCtl = { map, ready } · ruft SB.requestRender() nach Boot
    ========================================================================== */
 (function(){
 'use strict';
 var SB=window.SB;
 var route=SB.route,R=route.R;
+var M=SB.trip.map||{};
+var COLORS={
+  route:M.routeColor||'#EC0016',
+  done:M.doneColor||'#FFD800',
+  stop:M.stopColor||'#EC0016',
+  bg:M.bg||'#EFEDE8'
+};
 var loading=document.getElementById('loading');
 SB.mapCtl={map:null,ready:false};
 
@@ -33,24 +41,24 @@ function boot(){
       'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png',
       'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png'],
       tileSize:256,maxzoom:18,attribution:'© OpenStreetMap-Mitwirkende © CARTO'}},
-    layers:[{id:'bg',type:'background',paint:{'background-color':'#EFEDE8'}},
+    layers:[{id:'bg',type:'background',paint:{'background-color':COLORS.bg}},
       {id:'carto',type:'raster',source:'carto',paint:{'raster-fade-duration':0}}]}});
   SB.mapCtl.map=map;
   map.on('load',function(){
     // 3D-Gelände ist der teuerste Layer – auf Phones/schwachen Geräten weglassen.
-    if(!SB.lowPower){try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
+    if(M.terrain!==false&&!SB.lowPower){try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
       tiles:['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
       tileSize:256,maxzoom:11});
       map.setTerrain({source:'dem',exaggeration:1.5});}catch(e){}}
     map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:R}}});
     map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
-    map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':'#EC0016','line-width':4,'line-dasharray':[2,1.4]}});
+    map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':COLORS.route,'line-width':4,'line-dasharray':[2,1.4]}});
     map.addSource('done',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[R[0],R[0]]}}});
-    map.addLayer({id:'done',type:'line',source:'done',paint:{'line-color':'#FFD800','line-width':5}});
+    map.addLayer({id:'done',type:'line',source:'done',paint:{'line-color':COLORS.done,'line-width':5}});
     map.addSource('stops',{type:'geojson',data:{type:'FeatureCollection',features:route.STOP_PTS.map(function(p){return {type:'Feature',geometry:{type:'Point',coordinates:p}}})}});
-    map.addLayer({id:'stops-o',type:'circle',source:'stops',paint:{'circle-radius':8,'circle-color':'#EC0016'}});
+    map.addLayer({id:'stops-o',type:'circle',source:'stops',paint:{'circle-radius':8,'circle-color':COLORS.stop}});
     map.addLayer({id:'stops-i',type:'circle',source:'stops',paint:{'circle-radius':4,'circle-color':'#fff'}});
-    map.addImage('zug',emojiImage('🚆',96),{pixelRatio:2});
+    map.addImage('zug',emojiImage(M.trainEmoji||'🚆',96),{pixelRatio:2});
     map.addSource('train',{type:'geojson',data:{type:'Feature',geometry:{type:'Point',coordinates:R[0]}}});
     map.addLayer({id:'train',type:'symbol',source:'train',layout:{'icon-image':'zug','icon-size':0.62,'icon-allow-overlap':true,'icon-ignore-placement':true}});
     SB.mapCtl.ready=true;loading.classList.add('aus');
