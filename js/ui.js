@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SenfBahn – UI: Story-Karten, Schreibmaschine, Toast, Deko & RSVP
+   Schlemmer Bahn – UI: Story-Karten, Schreibmaschine, Toast, Deko & RSVP
    Braucht: js/data.js (SB.config, SB.scenes, SB.reduced, SB.isMobile)
    Stellt bereit: SB.startType(i), SB.showToast(msg), SB.crumbRain(n)
    ========================================================================== */
@@ -129,23 +129,10 @@ if(logoEl){
   logoEl.addEventListener('click',function(){SB.crumbRain(9,null,70);});
 }
 
-/* ---- RSVP: Mail im Reise-Ton ------------------------------------------------------ */
+/* ---- RSVP: Mail, ganz kurz ------------------------------------------------------ */
 function mailtoUrl(variante){
-  var subject=variante+' — ich steig ein (SenfBahn SB 143)';
-  var body=[
-    'Hallo,','',
-    variante+'. Ich komm mit — Nürnberg, Elsass, Burgund. Zwei Plätze,',
-    'auf deinem liegt schon ein Croissant.','',
-    'Croissant du matin, tout va bien. Der Rest steht in der Karte,',
-    'die du gerade gesehen hast.','',
-    'Meine drei Bedingungen (nicht verhandelbar, aber charmant):',
-    '  1. Den Fensterplatz teilen wir uns — abtreten gilt nicht.',
-    '  2. Der Rosmarin-Topf fährt im Handgepäck mit. Frag nicht.',
-    '  3. Beim Rheinübergang läuft „La vie en rose". Einmal. Mindestens.','',
-    'Sag mir nur, wann wir die TGV-Sparpreise buchen (ab 29 € —',
-    'die sind schneller weg als ein warmes Pain au Chocolat).','',
-    'À bientôt — und ja, an die Croissants hab ich gedacht.'
-  ].join('\n');
+  var subject=variante+' — Schlemmer Bahn SB 143';
+  var body='Ich bin dabei.';
   return 'mailto:'+encodeURIComponent(SB.config.EMAIL_AN)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
 }
 function feiern(variante){

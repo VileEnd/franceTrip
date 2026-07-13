@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SenfBahn – Daten & Konfiguration
+   Schlemmer Bahn – Daten & Konfiguration
    Alles, was man beim Pflegen anfassen will (E-Mail, Tempo, Route, Szenen),
    steht in DIESER Datei. Die übrigen js/-Dateien sind Maschinenraum.
    Ladereihenfolge: data → ui → map → music → story (siehe index.html).
