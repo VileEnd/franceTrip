@@ -2,10 +2,19 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>SenfBahn Sonderzug – Willst du mit mir verreisen?</title>
+<meta name="description" content="Ein Sonderzug-Vorschlag: Nürnberg → Elsass → Burgund. Zwei Plätze, ein Croissant. Willst du mit mir verreisen?">
+<meta name="theme-color" content="#EC0016">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Willst du mit mir verreisen? · SenfBahn SB 143">
+<meta property="og:description" content="Nürnberg → Elsass → Burgund. Croissant du matin, tout va bien.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,800;0,900;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
@@ -116,6 +125,29 @@
   footer b{color:#fff}
   .crumb{position:fixed;top:-50px;z-index:2000;font-size:1.6rem;animation:fall linear forwards;pointer-events:none}
   @keyframes fall{to{transform:translateY(115vh) rotate(320deg)}}
+  .logo{cursor:pointer;user-select:none}
+
+  /* Musik-Umschalter (erscheint, sobald die Karte Frankreich erreicht) */
+  #musicbtn{display:none;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;
+    border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;font-size:1rem;line-height:1;
+    cursor:pointer;font-family:inherit;flex:0 0 auto;transition:background .15s,color .15s}
+  #musicbtn.on{background:#fff;color:var(--rot)}
+  #musicbtn.pulse{animation:mpulse 1.35s ease-in-out infinite}
+  @keyframes mpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.55)}50%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
+  #toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-14px);z-index:1300;
+    background:rgba(27,31,38,.92);color:#fff;font-size:.8rem;font-weight:800;padding:8px 16px;border-radius:999px;
+    opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #yt{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:.01;pointer-events:none;z-index:-1;border:0}
+
+  /* Reise-Trikot (Croissant du matin, tout va bien!) */
+  .teewrap{max-width:340px;margin:8px auto 0;text-align:center}
+  .tee{width:100%;height:auto;display:block;filter:drop-shadow(0 20px 44px rgba(27,31,38,.18))}
+  .tee .shirt{fill:#fff;stroke:#E1E5E9;stroke-width:2}
+  .tee .collar{fill:none;stroke:#E1E5E9;stroke-width:3}
+  .tee .tag{fill:#AEB4BB;font:800 10px Inter,sans-serif;letter-spacing:.5px}
+  .tee .teetxt{font-family:Georgia,'Times New Roman',serif;fill:var(--ink);font-weight:600;font-size:21px}
+  .teecap{margin-top:16px;font-size:.82rem;color:var(--grau);font-weight:600}
 
   @media (max-width:640px){
     /* backdrop-filter:blur() over a moving map is the #1 cause of scroll jank on
@@ -155,10 +187,13 @@
 <body>
 
 <div id="topbar">
-  <div class="logo">SB</div>
+  <div class="logo" id="logo" title="Nicht klicken. (Doch, klick.)">SB</div>
+  <button id="musicbtn" type="button" aria-label="Musik an/aus: La vie en rose – Zaz" aria-pressed="false" title="La vie en rose — Zaz">♪</button>
   <div class="cl">Ein Trip, den ich uns ausgedacht habe.</div>
   <div id="ticker"><span class="l">Fahrtkosten p. P.</span><span class="v" id="tv">0,00 €</span></div>
 </div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="yt" aria-hidden="true"></div>
 
 <section id="hero">
   <div class="ey">Sonderzug SB 143 · nur ein Vorschlag</div>
@@ -170,11 +205,11 @@
 
 <div id="scrolly">
   <div id="stage">
-    <div id="map"></div>
-    <div id="vignette"></div>
+    <div id="map" aria-hidden="true"></div>
+    <div id="vignette" aria-hidden="true"></div>
     <div id="loading">Karte lädt …</div>
     <div id="cards"></div>
-    <div id="autoctl"><span class="hint">Autopilot</span><button id="autobtn">⏸ Anhalten</button></div>
+    <div id="autoctl"><span class="hint">Autopilot</span><button id="autobtn" type="button" aria-label="Autopilot anhalten oder weiterfahren">⏸ Anhalten</button></div>
     <div id="prog"><i id="progfill"></i></div>
   </div>
   <div id="spacer"></div>
@@ -226,6 +261,22 @@
   </div>
 </div></section>
 
+<section class="block" style="background:var(--hell)"><div class="wrap">
+  <h3 class="bh">Unser Reise-Trikot</h3>
+  <p class="bs">Du weißt schon, welches. „Croissant du matin, tout va bien" — quasi die Vereinshymne dieser Bahn. Ich sag ja nicht, dass wir es beide am Bahnsteig tragen. Ich sag nur: es wäre konsequent.</p>
+  <div class="teewrap">
+    <svg class="tee" viewBox="0 0 400 430" role="img" aria-label="Weißes T-Shirt mit Croissant und dem Aufdruck: Croissant du matin, tout va bien!">
+      <path class="shirt" d="M132,44 C160,78 240,78 268,44 L330,62 L364,128 L314,156 L300,134 L300,388 Q300,398 290,398 L110,398 Q100,398 100,388 L100,134 L86,156 L36,128 L70,62 Z"/>
+      <path class="collar" d="M150,52 C176,80 224,80 250,52"/>
+      <text class="tag" x="243" y="120" text-anchor="middle">UT</text>
+      <text x="200" y="232" text-anchor="middle" font-size="78">🥐</text>
+      <text class="teetxt" x="200" y="286" text-anchor="middle">Croissant du matin,</text>
+      <text class="teetxt" x="200" y="312" text-anchor="middle">tout va bien!</text>
+    </svg>
+    <div class="teecap">Weißes Baumwoll-Tee, Croissant vorne drauf. Reisetauglich, fleckenverzeihend, thematisch alternativlos.</div>
+  </div>
+</div></section>
+
 <section id="rsvp">
   <div class="ey">Und jetzt im Ernst</div>
   <h3>Kommst du mit?</h3>
@@ -239,14 +290,14 @@
 </section>
 
 <footer>
-  Kartendaten © OpenStreetMap-Mitwirkende, © CARTO · Höhendaten: AWS Terrain Tiles · Preise ca., Stand Sommer 2026.<br>
-  Alles selbst zusammengesucht. Keine Werbung, kein Sponsoring — nur ich.
+  Kartendaten © OpenStreetMap-Mitwirkende, © CARTO · Höhendaten: AWS Terrain Tiles · Musik: „La vie en rose" — Zaz (via YouTube) · Preise ca., Stand Sommer 2026.<br>
+  Alles selbst zusammengesucht. Keine Werbung, kein Sponsoring — nur ich. · <b>Croissant du matin, tout va bien.</b>
 </footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
 (function(){
-  var EMAIL_AN = "DEINE-EMAIL@HIER-EINTRAGEN.de";
+  var EMAIL_AN = "frankreich.0wl0i@passmail.net";
   var SCENE_VH = 260;
   var AUTO_SEK_PRO_SZENE = 12;
 
@@ -452,6 +503,7 @@
     progfill.style.width=(p*100)+'%';
     var fs=p*N,si=clamp(Math.floor(fs),0,N-1),local=fs-si,s=SC[si];
     if(si!==lastSi){lastSi=si;startType(si);}
+    if(si>=FRANCE_SCENE)reachFrance();   // Rheinübergang → „La vie en rose"
     for(var i=0;i<N;i++){
       var el=document.getElementById('card'+i);
       if(i!==si){el.style.opacity=0;el.style.transform='translateY(34px)';continue;}
@@ -546,17 +598,100 @@
   window.addEventListener('scroll',maybeBoot,{passive:true});
   maybeBoot();
 
+  // ---- Musik: „La vie en rose" (Zaz), sobald die Karte Frankreich erreicht ---
+  var FRANCE_SCENE=3;                 // Szene „Über den Rhein: Straßburg"
+  var YT_ID='6A_lOwSnS8c';
+  var ytPlayer=null,ytReady=false,musicWanted=false,franceHit=false;
+  var musicbtn=document.getElementById('musicbtn');
+  var toast=document.getElementById('toast');
+  function showToast(msg){
+    if(!toast)return;
+    toast.textContent=msg;toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t=setTimeout(function(){toast.classList.remove('show');},3400);
+  }
+  function loadYT(){
+    if(document.getElementById('yt-api')||window.YT)return;
+    var t=document.createElement('script');t.id='yt-api';t.src='https://www.youtube.com/iframe_api';
+    (document.head||document.body).appendChild(t);
+  }
+  window.onYouTubeIframeAPIReady=function(){
+    if(ytPlayer)return;
+    ytPlayer=new YT.Player('yt',{videoId:YT_ID,
+      playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,modestbranding:1,loop:1,playlist:YT_ID},
+      events:{
+        'onReady':function(){ytReady=true;if(musicWanted)playMusic();},
+        'onStateChange':function(e){
+          if(e.data===1){setMusicUI(true);}                    // PLAYING
+          else if(e.data===2||e.data===0){setMusicUI(false);}  // PAUSED / ENDED
+        }
+      }});
+  };
+  function setMusicUI(on){
+    if(!musicbtn)return;
+    musicbtn.classList.toggle('on',on);
+    if(on)musicbtn.classList.remove('pulse');
+    musicbtn.setAttribute('aria-pressed',on?'true':'false');
+  }
+  function playMusic(){
+    musicWanted=true;
+    if(!ytReady){loadYT();return;}
+    try{ytPlayer.unMute();ytPlayer.setVolume(65);ytPlayer.playVideo();}catch(e){}
+  }
+  function pauseMusic(){
+    musicWanted=false;
+    try{ytPlayer&&ytPlayer.pauseVideo();}catch(e){}
+  }
+  function reachFrance(){
+    if(franceHit)return;franceHit=true;
+    if(!musicbtn)return;
+    musicbtn.style.display='inline-flex';
+    musicbtn.classList.add('pulse');
+    showToast('♪ La vie en rose · Zaz');
+    playMusic();   // best effort – blockt der Browser Autoplay, lädt der Puls zum Antippen ein
+  }
+  if(musicbtn){
+    musicbtn.addEventListener('click',function(){
+      musicbtn.classList.remove('pulse');
+      if(musicbtn.classList.contains('on'))pauseMusic();else playMusic();
+    });
+  }
+  // Player nach der ersten echten Interaktion vorbereiten → Ton am Rhein ist sofort da.
+  ['pointerdown','touchstart','keydown'].forEach(function(ev){
+    window.addEventListener(ev,loadYT,{passive:true,once:true});
+  });
+
+  // Kleiner Twerk: aufs SB-Logo tippen = Croissant-Regen.
+  var logoEl=document.getElementById('logo');
+  if(logoEl){
+    logoEl.addEventListener('click',function(){
+      if(reduced)return;
+      var icons=['🥐','🥐','🧈','🥖'];
+      for(var i=0;i<9;i++){(function(i){setTimeout(function(){
+        var c=document.createElement('div');c.className='crumb';
+        c.textContent=icons[Math.floor(Math.random()*icons.length)];
+        c.style.left=(Math.random()*96)+'vw';
+        c.style.animationDuration=(2+Math.random()*2)+'s';
+        document.body.appendChild(c);setTimeout(function(){c.remove()},5200);
+      },i*70)})(i);}
+    });
+  }
+
   function mailtoUrl(variante){
-    var subject=variante+' — ich komm mit';
+    var subject=variante+' — ich steig ein (SenfBahn SB 143)';
     var body=[
-      'Hi,','',
-      variante+', ich komm mit.','',
-      'Zwei, drei Sachen noch:',
-      '- Fensterplatz teilen wir uns, nicht abtreten',
-      '- der Rosmarin fährt mit, ohne Diskussion',
-      '- Croissants bitte nicht nur am ersten Tag','',
-      'Sag mir, wann du die TGV-Tickets buchen willst.','',
-      'Bis dann'
+      'Hallo,','',
+      variante+'. Ich komm mit — Nürnberg, Elsass, Burgund. Zwei Plätze,',
+      'auf deinem liegt schon ein Croissant.','',
+      'Croissant du matin, tout va bien. Der Rest steht in der Karte,',
+      'die du gerade gesehen hast.','',
+      'Meine drei Bedingungen (nicht verhandelbar, aber charmant):',
+      '  1. Den Fensterplatz teilen wir uns — abtreten gilt nicht.',
+      '  2. Der Rosmarin-Topf fährt im Handgepäck mit. Frag nicht.',
+      '  3. Beim Rheinübergang läuft „La vie en rose". Einmal. Mindestens.','',
+      'Sag mir nur, wann wir die TGV-Sparpreise buchen (ab 29 € —',
+      'die sind schneller weg als ein warmes Pain au Chocolat).','',
+      'À bientôt — und ja, an die Croissants hab ich gedacht.'
     ].join('\n');
     return 'mailto:'+encodeURIComponent(EMAIL_AN)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   }
