@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SenfBahn – Scrollytelling: Render-Loop & Autopilot
+   Schlemmer Bahn – Scrollytelling: Render-Loop & Autopilot
    Braucht: data.js (Szenen/Route), ui.js (startType), map.js (mapCtl),
             music.js (SB.music.reachFrance)
    ========================================================================== */

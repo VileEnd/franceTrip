@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SenfBahn – Karte (MapLibre): Boot, Layer, Zug-Icon
+   Schlemmer Bahn – Karte (MapLibre): Boot, Layer, Zug-Icon
    Braucht: js/data.js (SB.route, SB.isMobile, SB.lowPower)
    Stellt bereit: SB.mapCtl = { map, ready } · ruft SB.requestRender() nach Boot
    ========================================================================== */
