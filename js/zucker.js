@@ -186,8 +186,8 @@ function zeichne(s){
   if(s.text!==letzterText){letzterText=s.text;cap.textContent=TEXTE[s.text];}
 }
 
-/* ---- Antrieb: läuft nur, solange die Bühne sichtbar ist ---------------------- */
-var raf=null,start=0,steht=0,laeuft=false;
+/* ---- Antrieb: läuft nur, solange die Bühne im Bild und der Tab vorn ist ------ */
+var raf=null,start=0,steht=0,laeuft=false,sichtbar=false;
 var letztesBild=-1;
 function tick(ts){
   raf=null;
@@ -197,7 +197,7 @@ function tick(ts){
   if(laeuft)raf=requestAnimationFrame(tick);
 }
 function los(){
-  if(laeuft||SB.reduced)return;
+  if(laeuft||SB.reduced||!sichtbar||document.hidden)return;
   laeuft=true;
   raf=requestAnimationFrame(function(ts){start=ts-steht*1000;tick(ts);});
 }
@@ -207,17 +207,18 @@ function halt(){
   if(raf)cancelAnimationFrame(raf);raf=null;
   steht=((performance.now()-start)/1000)%ZYKLUS;   // Position merken
 }
-function vonVorn(){steht=0;if(laeuft){halt();los();}else{los();}}
+function vonVorn(){halt();steht=0;letztesBild=-1;los();}   // halt() zuerst: es überschreibt steht
 
 if(SB.reduced){
   zeichne(zustand(RUNDEN*RUNDE+1.2));              // Standbild: volle Tasse
+  buehne.style.cursor='default';buehne.removeAttribute('title');
 }else{
   zeichne(zustand(0));
   if(window.IntersectionObserver){
     new IntersectionObserver(function(es){
-      es.forEach(function(e){e.isIntersecting?los():halt();});
+      es.forEach(function(e){sichtbar=e.isIntersecting;sichtbar?los():halt();});
     },{threshold:.15}).observe(buehne);
-  }else los();
+  }else{sichtbar=true;los();}
   document.addEventListener('visibilitychange',function(){document.hidden?halt():los();});
   buehne.addEventListener('click',function(){
     vonVorn();
