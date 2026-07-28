@@ -1,35 +1,37 @@
 /* ==========================================================================
-   Schlemmer Bahn – Musik: „La vie en rose" (Zaz) am Rheinübergang
-   Braucht: js/data.js (SB.config.YT_ID), js/ui.js (SB.showToast)
-   Stellt bereit: SB.music.reachFrance()
+   Engine – Musik am Meilenstein (optional)
+   Liest trip.music: { ytId, label, volume, triggerScene, hint,
+   gate:false | {flag,title,text,go,skip} }. Fehlt trip.music, tut dieses
+   Modul nichts (SB.music=null) und der ♪-Knopf bleibt unsichtbar — der Trip
+   funktioniert ohne Musik.
 
-   Autoplay-Strategie:
-   Browser erlauben Ton nur nach einer „aktivierenden" Geste — laut Spec sind
-   das NUR click, keydown und touchend. Scrollen (wheel/touchmove/scroll),
-   auch das automatische Weiterscrollen des Autopiloten, zählt NICHT. Wer die
-   Seite nur mit dem Mausrad durchscrollt, löst also nie von selbst eine
-   gültige Geste aus — deshalb reichte es vorher oft nicht bis Frankreich.
+   Warum überhaupt eine Geste? Browser erlauben unmutierten Ton nur nach
+   einer echten Geste, und beim eingebetteten YouTube-Player (Ton läuft im
+   iFrame, per postMessage gesteuert) verlangen manche Browser den
+   play()-Aufruf synchron IM Klick-Handler. Ein Klick auf einen sichtbaren
+   Button ist der einzige Weg, der überall zuverlässig funktioniert. Danach
+   wird die Lautstärke sanft von 0 hochgefadet.
 
-   Lösung: Sobald IRGENDWO auf der Seite die allererste gültige Geste
-   passiert (bei Touch meist einfach der erste Wisch zum Scrollen — ganz
-   normales Verhalten, kein Extra-Tap nötig), wird der Player kurz lautlos
-   an- und wieder ausgeschaltet („primen"). Das „verbraucht" die Geste schon
-   VOR Frankreich. Kommt der Zug dann am Rhein an, wird nur noch die
-   Lautstärke hochgefadet — kein neuer play()-Aufruf, also auch keine neue
-   Geste nötig. Nur wenn bis Frankreich wirklich noch NIE eine gültige Geste
-   vorkam (z. B. reines Mausrad-Scrollen ohne jeden Klick), bleibt der
-   stumme Fallback mit Freischaltung bei der nächsten Geste übrig.
+   Zwei Wege dorthin: `gate:{…}` legt am Meilenstein einen Dialog vor
+   (#francegate, hier dynamisch erzeugt) und hält so lange Autopilot und
+   Scrollen an. `gate:false` unterbricht die Fahrt nicht — dann taucht nur
+   der ♪-Knopf auf, dazu ein kurzer Hinweis (`hint`).
    ========================================================================== */
 (function(){
 'use strict';
 var SB=window.SB;
-var cfg=SB.config;
-var TARGET_VOL=65;
+var M=SB.trip.music;
 var musicbtn=document.getElementById('musicbtn');
+if(!M){SB.music=null;return;}
+
+var TARGET_VOL=M.volume||65;
+if(musicbtn){
+  musicbtn.title=M.label||'Musik';
+  musicbtn.setAttribute('aria-label','Musik an/aus: '+(M.label||''));
+}
 
 var ytPlayer=null,ytReady=false,apiRequested=false;
-var wantMusic=false,franceHit=false,mutedFallback=false,playing=false;
-var primed=false,priming=false,primeRequested=false;
+var wantMusic=false,hit=false,playing=false,pendingPlay=false;
 var fadeTimer=null;
 
 /* Lautstärke in kleinen Schritten auf `to` bringen statt hart zu springen. */
@@ -54,116 +56,129 @@ function loadAPI(){
 }
 window.onYouTubeIframeAPIReady=function(){
   if(ytPlayer)return;
-  ytPlayer=new YT.Player('yt',{videoId:cfg.YT_ID,
-    playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,modestbranding:1,loop:1,playlist:cfg.YT_ID},
+  ytPlayer=new YT.Player('yt',{videoId:M.ytId,
+    playerVars:{autoplay:0,controls:0,rel:0,playsinline:1,modestbranding:1,loop:1,playlist:M.ytId},
     events:{
       onReady:function(){
         ytReady=true;
-        if(primeRequested)primeNow();
-        if(wantMusic)tryPlay();
+        if(pendingPlay){pendingPlay=false;startWithFadeIn();}
       },
       onStateChange:function(e){
-        if(priming)return;   // kurzes Stumm-Anspielen soll die Anzeige nicht flackern lassen
         playing=(e.data===1);   // 1 = PLAYING
         setUI();
       }
     }});
 };
+/* Player so früh wie möglich laden, damit er beim Dialog schon bereitsteht. */
+['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
+  window.addEventListener(ev,loadAPI,{passive:true,once:true});
+});
 
 function setUI(){
   if(!musicbtn)return;
-  var on=playing&&!mutedFallback;   // „an" heißt: läuft UND ist hörbar
-  musicbtn.classList.toggle('on',on);
-  if(on)musicbtn.classList.remove('pulse');
-  musicbtn.setAttribute('aria-pressed',on?'true':'false');
+  musicbtn.classList.toggle('on',playing);
+  musicbtn.setAttribute('aria-pressed',playing?'true':'false');
 }
 
-/* Erste gültige Geste irgendwo auf der Seite → Player kurz lautlos anspielen
-   und sofort wieder pausieren. „Verbraucht" die Geste schon vor Frankreich,
-   damit dort nur noch die Lautstärke hochgefadet werden muss. */
-function primeNow(){
-  if(primed||priming)return;
-  if(!ytReady){primeRequested=true;loadAPI();return;}
-  priming=true;
-  try{ytPlayer.unMute();ytPlayer.setVolume(0);ytPlayer.playVideo();}catch(e){}
-  setTimeout(function(){
-    try{ytPlayer.pauseVideo();}catch(e){}
-    primed=true;priming=false;
-  },300);
-}
-
-function tryPlay(){
+/* Direkt aus einem echten Klick-Handler aufrufen — nur dann ist der Ton in
+   jedem Browser garantiert erlaubt. Startet bei Lautstärke 0 und blendet auf. */
+function startWithFadeIn(){
   wantMusic=true;
-  if(!ytReady){loadAPI();return;}   // onReady ruft tryPlay() erneut
-  if(primed){
-    // Schon früher freigeschaltet — nur fortsetzen & einblenden, kein neuer
-    // play()-Aufruf nötig, also auch keine frische Geste erforderlich.
-    mutedFallback=false;
-    try{ytPlayer.unMute();ytPlayer.playVideo();}catch(e){}
-    fadeVolume(TARGET_VOL,2600);
-    return;
-  }
+  if(!ytReady){pendingPlay=true;loadAPI();return;}
   try{ytPlayer.unMute();ytPlayer.setVolume(0);ytPlayer.playVideo();}catch(e){}
-  // Nach kurzer Frist prüfen, ob der Ton wirklich läuft.
-  clearTimeout(tryPlay._t);
-  tryPlay._t=setTimeout(function(){
-    if(!wantMusic)return;
-    var st=-9;try{st=ytPlayer.getPlayerState();}catch(e){}
-    if(st===1||st===3){   // PLAYING oder BUFFERING → hörbar gestartet, einblenden
-      primed=true;mutedFallback=false;
-      fadeVolume(TARGET_VOL,2600);
-    } else {               // vom Browser geblockt (noch nie eine gültige Geste) → Stumm-Start
-      mutedFallback=true;
-      try{ytPlayer.mute();ytPlayer.setVolume(TARGET_VOL);ytPlayer.playVideo();}catch(e){}
-      if(musicbtn)musicbtn.classList.add('pulse');
-      SB.showToast('♪ läuft stumm — einmal tippen für Ton');
-    }
-  },900);
+  fadeVolume(TARGET_VOL,2600);
 }
 function pause(){
   wantMusic=false;
   clearInterval(fadeTimer);
   try{ytPlayer&&ytPlayer.pauseVideo();}catch(e){}
 }
-/* Erste Geste nach dem Stumm-Start → Ton an, sanft eingeblendet. */
-function unlockSound(){
-  if(!mutedFallback||!ytReady)return;
-  primed=true;mutedFallback=false;
-  try{
-    ytPlayer.unMute();ytPlayer.setVolume(0);
-    if(ytPlayer.getPlayerState()!==1)ytPlayer.playVideo();
-  }catch(e){}
+function resumeWithFadeIn(){
+  if(!ytReady)return;
+  wantMusic=true;
+  try{ytPlayer.playVideo();}catch(e){}
   fadeVolume(TARGET_VOL,1800);
-  if(musicbtn)musicbtn.classList.remove('pulse');
-  setUI();
-  SB.showToast('♪ La vie en rose · Zaz');
 }
 
+/* ---- Am Meilenstein: Dialog ODER stiller Hinweis -----------------------------
+   Der Dialog ist der zuverlässige Weg, den Ton freizugeben — er hält dafür
+   aber die ganze Fahrt an. `gate:false` lässt ihn weg: dann erscheint nur
+   der ♪-Knopf plus ein kurzer Hinweis, und der Ton startet erst, wenn man
+   ihn drückt. Ohne echte Geste lässt kein Browser Ton zu, das bleibt so —
+   ohne Dialog wird das Anschalten also freiwillig statt vorgelegt.          */
+/* Nur ein AUSDRÜCKLICHES gate:false schaltet den Dialog ab — ein Trip, der
+   das Feld einfach weglässt, bekommt weiter den alten Standard (Dialog mit
+   Standardtexten). So bricht die Änderung keine bestehenden Trips.        */
+var G=(M.gate===undefined)?{}:M.gate,openGate=null;
+if(G){
+  var gate=document.createElement('div');
+  gate.id='francegate';
+  gate.setAttribute('role','dialog');
+  gate.setAttribute('aria-modal','true');
+  gate.setAttribute('aria-labelledby','fgate-h');
+  gate.setAttribute('aria-hidden','true');
+  gate.innerHTML=
+    '<div class="fgate-card">'+
+      (G.flag?'<div class="fgate-flag">'+G.flag+'</div>':'')+
+      '<h4 id="fgate-h">'+(G.title||'')+'</h4>'+
+      (G.text?'<p>'+G.text+'</p>':'')+
+      '<div class="fgate-actions">'+
+        '<button id="fgate-go" class="rot" type="button">'+(G.go||'♪ Musik an')+'</button>'+
+        '<button id="fgate-skip" type="button" class="fgate-skip">'+(G.skip||'Ohne Musik weiter')+'</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(gate);
+  var gateGo=document.getElementById('fgate-go'),gateSkip=document.getElementById('fgate-skip');
+
+  var gateOpen=false;
+  var blockScroll=function(e){if(gateOpen)e.preventDefault();};
+  var blockScrollKeys=function(e){
+    if(!gateOpen||gate.contains(e.target))return;
+    if(['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].indexOf(e.key)>-1)e.preventDefault();
+  };
+  window.addEventListener('wheel',blockScroll,{passive:false});
+  window.addEventListener('touchmove',blockScroll,{passive:false});
+  window.addEventListener('keydown',blockScrollKeys);
+
+  openGate=function(){
+    gateOpen=true;
+    gate.classList.add('show');
+    gate.setAttribute('aria-hidden','false');
+    SB.autopilot&&SB.autopilot.hold(true);
+    gateGo.focus();
+  };
+  var closeGate=function(){
+    gateOpen=false;
+    gate.classList.remove('show');
+    gate.setAttribute('aria-hidden','true');
+    SB.autopilot&&SB.autopilot.hold(false);
+  };
+  gateGo.addEventListener('click',function(){closeGate();startWithFadeIn();});
+  gateSkip.addEventListener('click',closeGate);
+  gate.addEventListener('click',function(e){if(e.target===gate)closeGate();});  // Backdrop
+  gate.addEventListener('keydown',function(e){if(e.key==='Escape')closeGate();});
+}
+
+/* ---- Öffentliche Schnittstelle: story.js meldet jede Szene ---------------------- */
 SB.music={
-  reachFrance:function(){
-    if(franceHit)return;franceHit=true;
-    if(musicbtn){musicbtn.style.display='inline-flex';if(!primed)musicbtn.classList.add('pulse');}
-    SB.showToast('♪ La vie en rose · Zaz');
-    tryPlay();
+  onScene:function(si){
+    if(hit||si<M.triggerScene)return;
+    hit=true;
+    if(musicbtn)musicbtn.style.display='inline-flex';
+    if(openGate)openGate();
+    else if(SB.showToast)SB.showToast(M.hint||('♪ '+(M.label||'Musik')+' — oben antippen.'));
   }
 };
 
+/* Der ♪-Button: mit Dialog nur Pause/Weiter — ohne Dialog (gate:false) ist
+   er der EINZIGE Startweg. Deshalb über startWithFadeIn(): das merkt sich
+   den Wunsch (pendingPlay), falls der Player noch lädt, und spielt dann
+   von selbst los, statt den Klick zu verschlucken.                        */
 if(musicbtn){
   musicbtn.addEventListener('click',function(){
-    musicbtn.classList.remove('pulse');
-    if(mutedFallback){unlockSound();return;}
-    if(playing){pause();}
-    else{if(!ytReady)SB.showToast('♪ Musik lädt …');tryPlay();}
+    if(playing){pause();return;}
+    if(!ytReady&&SB.showToast)SB.showToast('♪ Musik lädt …');
+    startWithFadeIn();
   });
 }
-/* Gültige Aktivierungs-Gesten laut Spec: click, keydown, touchend (NICHT
-   wheel/touchmove/pointerdown — die zählen für Browser nicht als „Geste"). */
-['click','keydown','touchend'].forEach(function(ev){
-  window.addEventListener(ev,function(){primeNow();unlockSound();},{passive:true});
-});
-/* Player so früh wie möglich laden (auch bei Scroll-Vorgeschmack), damit die
-   erste echte Geste sofort etwas zum Primen vorfindet. */
-['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
-  window.addEventListener(ev,loadAPI,{passive:true,once:true});
-});
 })();

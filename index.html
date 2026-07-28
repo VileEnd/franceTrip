@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- Pro Trip anpassen: Titel & Social-Media-Vorschau (der Seitentitel wird
+     zusätzlich zur Laufzeit aus js/trip.js gesetzt — diese Tags sind für
+     Suchmaschinen & Link-Vorschauen, die kein JavaScript ausführen). -->
 <title>Schlemmer Bahn Sonderzug – Willst du mit mir verreisen?</title>
 <meta name="description" content="Ein Sonderzug-Vorschlag: Nürnberg → Elsass → Burgund. Zwei Plätze, ein Croissant. Willst du mit mir verreisen?">
 <meta name="theme-color" content="#EC0016">
@@ -20,23 +23,19 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<!-- Generische Hülle: alle Inhalte werden aus js/trip.js gerendert.
+     Für eine neue Reise nur js/trip.js kopieren & anpassen (+ <head> oben). -->
 
 <div id="topbar">
-  <div class="logo" id="logo" role="button" tabindex="0" title="Nicht klicken. (Doch, klick.)" aria-label="Überraschung">SB</div>
-  <button id="musicbtn" type="button" aria-label="Musik an/aus: La vie en rose – Zaz" aria-pressed="false" title="La vie en rose — Zaz">♪</button>
-  <div class="cl">Ein Trip, den ich uns ausgedacht habe.</div>
-  <div id="ticker"><span class="l">Fahrtkosten p. P.</span><span class="v" id="tv">0,00 €</span></div>
+  <div class="logo" id="logo" role="button" tabindex="0" aria-label="Überraschung"></div>
+  <button id="musicbtn" type="button" aria-label="Musik an/aus" aria-pressed="false">♪</button>
+  <div class="cl"></div>
+  <div id="ticker"><span class="l"></span><span class="v" id="tv">0,00 €</span></div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="yt" aria-hidden="true"></div>
 
-<section id="hero">
-  <div class="ey">Sonderzug SB 143 · nur ein Vorschlag</div>
-  <h1>Willst du mit mir <span>verreisen?</span></h1>
-  <p class="sub">Nürnberg → Elsass → Burgund. Etwa eine Woche, zwei Plätze. Ich hab's tatsächlich durchgerechnet.</p>
-  <div class="kicker2">Croissants sind eingeplant · der Rosmarin auch, frag nicht</div>
-  <div class="scrollhint">Einmal scrollen — dann läuft's von allein weiter ↓</div>
-</section>
+<section id="hero"></section>
 
 <div id="scrolly">
   <div id="stage">
@@ -50,86 +49,23 @@
   <div id="spacer"></div>
 </div>
 
-<section class="block" style="background:var(--hell)"><div class="wrap">
-  <h3 class="bh">Der Kassenzettel.</h3>
-  <p class="bs">Nur die Zugtickets, pro Person, zusätzlich zum D-Ticket. Croissants kommen nochmal oben drauf, aber die zähl ich nicht mit.</p>
-  <div class="preis">
-    <table>
-      <thead><tr><th>Strecke</th><th>Produkt</th><th style="text-align:right">Preis</th></tr></thead>
-      <tbody>
-        <tr class="frei"><td>Nürnberg → Stuttgart → Karlsruhe → Offenburg → Kehl</td><td>RE / Regio (D-Ticket)</td><td class="p">0,00 €</td></tr>
-        <tr><td>Kehl Bahnhof → Straßburg</td><td>Tram D · CTS-Ticket</td><td class="p">2,00 €</td></tr>
-        <tr><td>Straßburg → Colmar → Turckheim &amp; zurück</td><td>TER-Tag Elsass</td><td class="p">12,00 €</td></tr>
-        <tr><td>Straßburg → Dijon <span class="sparpreis">Sparpreis</span></td><td>TGV direkt · 2 h 06</td><td class="p">29,00 €</td></tr>
-        <tr><td>Dijon ⇄ Beaune</td><td>TER Mobigo</td><td class="p">14,00 €</td></tr>
-        <tr><td>Dijon → Straßburg <span class="sparpreis">Sparpreis</span></td><td>TGV direkt · 2 h 06</td><td class="p">29,00 €</td></tr>
-        <tr><td>Straßburg → Kehl Bahnhof</td><td>Tram D · CTS-Ticket</td><td class="p">2,00 €</td></tr>
-        <tr class="frei"><td>Kehl → … → Nürnberg</td><td>RE / Regio (D-Ticket)</td><td class="p">0,00 €</td></tr>
-        <tr class="summe"><td colspan="2">Summe pro Person</td><td class="p">88,00 €</td></tr>
-      </tbody>
-    </table>
-    <div class="budgetbar"><div class="fill"></div><span>88 € von 120 € Budget · bleiben 32 € übrig, ungefähr eine Mini-Cocotte.</span></div>
-  </div>
-</div></section>
+<main id="content"></main>
 
-<section class="block"><div class="wrap">
-  <h3 class="bh">Wo wir schlafen</h3>
-  <p class="bs">Da schlafen wir nochmal drüber — hier ein paar günstige Optionen, einfach nachgeschaut, nichts gesponsert.</p>
-  <div class="hgrid">
-    <div class="hcard"><span class="ort">Straßburg · 1–2 Nächte</span><h4>Ibis Budget / B&amp;B an der Gare</h4><p>Null Meter Kofferschleppen. Sozial &amp; zentral: Jugendherberge <b>CIARUS</b>.</p><p class="pr">ca. 60–90 € / DZ / Nacht</p></div>
-    <div class="hcard"><span class="ort">Colmar · 1 Nacht</span><h4>Ibis Budget Colmar Centre</h4><p>Fußläufig zu Altstadt &amp; Bahnhof. Morgens Turckheim, mittags Cocotte, abends Winstub.</p><p class="pr">ca. 60–85 € / DZ / Nacht</p></div>
-    <div class="hcard"><span class="ort">Dijon · 3–4 Nächte</span><h4>Ibis Budget / B&amp;B / CIS Dijon</h4><p>Basislager Burgund. Geheimtipp: <b>CIS Dijon</b> (Ethic Étapes) für günstige Doppelzimmer.</p><p class="pr">ca. 55–85 € / DZ / Nacht</p></div>
-  </div>
-</div></section>
+<section id="rsvp"></section>
 
-<section class="block" style="background:var(--hell)"><div class="wrap">
-  <h3 class="bh">Die Dienstkleidung</h3>
-  <p class="bs">Unser Motto steht schon drauf, ganz ohne Diskussion: <b>Essen bis zum Umfallen.</b></p>
-  <div class="teewrap">
-    <svg class="tee" viewBox="0 0 400 430" role="img" aria-label="Weißes T-Shirt mit Croissant und dem Aufdruck: Essen bis zum Umfallen">
-      <path class="shirt" d="M132,44 C160,78 240,78 268,44 L330,62 L364,128 L314,156 L300,134 L300,388 Q300,398 290,398 L110,398 Q100,398 100,388 L100,134 L86,156 L36,128 L70,62 Z"/>
-      <path class="collar" d="M150,52 C176,80 224,80 250,52"/>
-      <text class="tag" x="243" y="120" text-anchor="middle">UT</text>
-      <text x="200" y="232" text-anchor="middle" font-size="78">🥐</text>
-      <text class="teetxt" x="200" y="286" text-anchor="middle">Essen bis zum</text>
-      <text class="teetxt" x="200" y="312" text-anchor="middle">Umfallen.</text>
-    </svg>
-    <div class="teecap">Weißes Baumwoll-Tee, Croissant vorne drauf. Pflichtausstattung — Nachschlag ist kein Verstoß, sondern Vorschrift.</div>
-  </div>
-</div></section>
-
-<section class="block"><div class="wrap">
-  <h3 class="bh">Bonus-Runde: was noch geht</h3>
-  <p class="bs">Kein Muss, nur Ideen, falls noch Zeit &amp; Rucksackplatz übrig ist.</p>
-  <div class="hgrid">
-    <div class="hcard"><span class="ort">Marcigny · optional</span><h4>Emile Henry Werksverkauf</h4><p>Keramik-König seit 1850, −35 bis −40 %. <b>Di &amp; So geschlossen!</b></p><p class="pr">Bus + TER · ~25 € extra</p></div>
-    <div class="hcard"><span class="ort">Bresse · optional</span><h4>Beurre de Bresse AOP</h4><p>Eine von nur drei Butter-AOPs Frankreichs — traditionell gebuttert, butterblumengelb. Abstecher via Chalon-sur-Saône.</p><p class="pr">TER-Abstecher · Tagestrip</p></div>
-  </div>
-</div></section>
-
-<section id="rsvp">
-  <div class="ey">Und jetzt im Ernst</div>
-  <h3>Kommst du mit?</h3>
-  <p>Ein Klick, und ich schreib dir direkt eine Mail dazu. Den Rest besprechen wir dann in echt.</p>
-  <div class="btnrow">
-    <button class="rot" id="ja1">Ja</button>
-    <button class="rot alt" id="ja2">Sehr gerne</button>
-  </div>
-  <div id="rsvpdone">Mail ist offen — einfach abschicken. Croissants merk ich mir.</div>
-  <p class="fine">Der Rosmarin reist trotzdem im Handgepäck. Frag mich einfach, warum.</p>
-</section>
-
-<footer>
-  Kartendaten © OpenStreetMap-Mitwirkende, © CARTO · Höhendaten: AWS Terrain Tiles · Musik: „La vie en rose" — Zaz (via YouTube) · Preise ca., Stand Sommer 2026.<br>
-  Alles selbst zusammengesucht. Keine Werbung, kein Sponsoring — nur ich. · <b>Croissant du matin, tout va bien.</b>
-</footer>
+<footer id="footer"></footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<!-- Reihenfolge wichtig: data → ui → map → music → story -->
-<script src="js/data.js"></script>
+<!-- Reihenfolge wichtig: core (Engine-Kern) → trip (Daten) → mesh (3D-Basis)
+     → ui → map → music → story → tee3d/teapot (brauchen das DOM) -->
+<script src="js/core.js"></script>
+<script src="js/trip.js"></script>
+<script src="js/mesh.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/map.js"></script>
 <script src="js/music.js"></script>
 <script src="js/story.js"></script>
+<script src="js/tee3d.js"></script>
+<script src="js/teapot.js"></script>
 </body>
 </html>
