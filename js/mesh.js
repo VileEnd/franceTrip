@@ -45,11 +45,11 @@ function seg(n){return Math.max(4,Math.round(n*DET));}
    die Zahlen sind die x-Anteile im Bild.                                  */
 var BRAND={word:[0,0.62],logo:[0.66,1]};
 
-/* Gleismaße als halbe Breiten in Modelllängen. Daran hängen drei Dinge, die
-   zusammenpassen müssen: die Räder, das 3D-Gleisstück unter dem Zug und die
-   gezeichneten Schienen entlang der ganzen Route (js/map.js rechnet sie
-   damit in Pixel um). Deshalb stehen sie hier an einer Stelle.            */
-var GAUGE={rail:0.078,railw:0.011,tie:0.100,bed:0.114,tiePitch:0.070};
+/* Gleismaße als halbe Breiten in Modelllängen. Daran hängen zwei Dinge, die
+   zusammenpassen müssen: die Räder der Wagen und die gezeichneten Schienen
+   entlang der Route (js/map.js rechnet sie damit in Pixel um). Nur so läuft
+   der Zug wirklich auf seinen Schienen statt daneben.                     */
+var GAUGE={rail:0.078,railw:0.011,tie:0.100,bed:0.114};
 
 /* ---- Parametrische Fläche ------------------------------------------------
    P(u,v) liefert einen Punkt, die Normale kommt aus den Ableitungen —
@@ -396,30 +396,15 @@ function ice(out,C,opt){
   box(out,-0.094,-0.062, 0.062, 0.074,0.374,0.388,dark);
 }
 
-/* ---- Gleis ---------------------------------------------------------------
-   Ein Stück Schotterbett mit Schwellen und zwei Schienen, genau eine
-   Wagenteilung lang. Die Karte setzt unter jeden Wagen eines — dadurch
-   folgt das Gleis der Route und liegt auch in Kurven unter dem Zug.
-   Schienenoberkante bei z=0.004, der Rest liegt darunter im Boden.       */
-function iceTrack(out,C,len){
-  var rail=hexRGB(C.rail,'#9AA0A6'),tie=hexRGB(C.tie,'#544941'),
-      bed=hexRGB(C.ballast,'#918B82');
-  var L=len/2,G=GAUGE;
-  box(out,-L,L,-G.bed,G.bed,-0.020,-0.014,bed);
-  for(var x=-L+G.tiePitch/2;x<L-0.01;x+=G.tiePitch)
-    box(out,x-G.tiePitch*0.24,x+G.tiePitch*0.24,-G.tie,G.tie,-0.014,-0.006,tie);
-  [1,-1].forEach(function(s){
-    box(out,-L,L,s*G.rail-G.railw,s*G.rail+G.railw,-0.007,0.004,rail);
-  });
-}
-
 /* ---- Ganzer Triebzug -----------------------------------------------------
    Liefert die Bauteile, aus denen die Karte den Zug zusammensetzt:
-   Kopfwagen (Nase vorn, Kupplungskopf hinten), Mittelwagen und ein
-   Gleisstück. Der Schlusswagen ist derselbe Kopfwagen, um 180° gedreht —
-   deshalb braucht es dafür kein eigenes Netz.
+   Kopfwagen (Nase vorn, Kupplungskopf hinten) und Mittelwagen. Der
+   Schlusswagen ist derselbe Kopfwagen, um 180° gedreht — deshalb braucht
+   es dafür kein eigenes Netz.
    Gesetzt wird jeder Wagen einzeln auf die Route (siehe js/map.js), damit
-   der Zug in Kurven mitläuft statt sie starr abzuschneiden.              */
+   der Zug in Kurven mitläuft statt sie starr abzuschneiden. Das Gleis
+   zeichnet die Karte als Linie über die ganze Strecke — unter dem Zug
+   noch einmal als Körper wäre dasselbe zweimal.                          */
 function iceTrain(C){
   C=C||{};
   DET=C.detail||1;
@@ -428,16 +413,6 @@ function iceTrain(C){
   ice(mid,C,{front:false,rear:false,panto:true});
   DET=1;
   return {head:new Float32Array(head),mid:new Float32Array(mid)};
-}
-/* Ein Gleisstück für sich — die Karte legt es unter jeden Wagen, egal
-   welches Modell gerade oben drauf fährt.                                */
-function trackPiece(C,len){
-  C=C||{};
-  var v=[];
-  DET=C.detail||1;
-  iceTrack(v,C,len||1.06);
-  DET=1;
-  return new Float32Array(v);
 }
 
 /* ---- Fahrzeuge ----------------------------------------------------------
@@ -693,7 +668,7 @@ function chainPivot(base,pivot,rot){
 
 SB.mesh={hexRGB:hexRGB,surface:surface,revolve:revolve,sweep:sweep,ring:ring,
          box:box,ball:ball,curve:curve,croissant:croissant,ice:ice,
-         iceTrain:iceTrain,track:trackPiece,BRAND:BRAND,GAUGE:GAUGE,
+         iceTrain:iceTrain,BRAND:BRAND,GAUGE:GAUGE,
          vehicle:vehicle,tee:tee,teapot:teapot,
          program:program,draw:draw,mul:mul,mat:mat,chainPivot:chainPivot,
          STRIDE:STRIDE,FLOATS:11};

@@ -90,10 +90,11 @@ function emojiImage(emoji,size){
    bei jedem Zoom gleich groß erscheint.
 
    Der Zug ist kein starres Modell, sondern eine Kette: Kopfwagen, Mittel-
-   wagen, gedrehter Kopfwagen — und unter jedem Wagen ein Gleisstück. Jedes
-   Teil wird einzeln auf die Route gesetzt, um genau seinen Abstand zur
-   Zugspitze zurückversetzt. Deshalb legt sich der Zug in Kurven an die
-   Strecke, statt sie als Balken abzuschneiden.                             */
+   wagen, gedrehter Kopfwagen. Jeder Wagen wird einzeln auf die Route
+   gesetzt, um genau seinen Abstand zur Zugspitze zurückversetzt. Deshalb
+   legt sich der Zug in Kurven an die Strecke, statt sie als Balken
+   abzuschneiden. Das Gleis darunter zeichnet die Karte als Linie über die
+   ganze Route (siehe boot()).                                             */
 var MESH=SB.mesh;
 /* Auf der Karte bewusst gröber tesselliert als im eigenen Canvas: dort
    zählt jedes Detail, hier zählt jede Millisekunde pro Bild. */
@@ -225,20 +226,18 @@ function makeVehicleLayer(map){
     m.count=data.length/MESH.FLOATS;
     return m;
   }
-  /* Aufstellung bauen. Jedes Netz wird höchstens EINMAL gerechnet und
-     hochgeladen — danach kostet ein Modellwechsel nur noch das Umsortieren
-     der Liste, kein Neubauen. Deshalb ist das Antippen ab dem zweiten Mal
-     umsonst. `at` ist der Abstand zur Zugspitze in Modelllängen.         */
+  /* Aufstellung bauen: nur die Wagen — das Gleis liegt als Linie auf der
+     Karte, über die ganze Strecke (siehe boot()). Jedes Netz wird höchstens
+     EINMAL gerechnet und hochgeladen; danach kostet ein Modellwechsel nur
+     noch das Umsortieren der Liste, kein Neubauen. Deshalb ist das Antippen
+     ab dem zweiten Mal umsonst. `at` ist der Abstand zur Zugspitze in
+     Modelllängen.                                                        */
   function need(gl,name,make){
     if(!bufs[name])upload(gl,name,make());
   }
   function build(gl){
     var C=meshCfg(),i;
     parts=[];
-    if(RAILS){
-      need(gl,'track',function(){return MESH.track(C,PITCH+0.03);});
-      for(i=0;i<CARS;i++)parts.push({n:'track',at:i*PITCH,turn:false});
-    }
     if(currentKind==='ice'&&CARS>1){
       if(!bufs.head||!bufs.mid){
         var t=MESH.iceTrain(C);
@@ -392,9 +391,9 @@ function boot(){
        Nicht als 3D-Körper (das wären tausende Schwellen), sondern als vier
        Linien: Schotterbett, Schwellenschraffur (kurze Striche über die
        Breite) und zwei versetzte Schienen. Die Breiten kommen aus denselben
-       Maßen wie das 3D-Gleisstück unter dem Zug (SB.mesh.GAUGE × Pixel je
-       Modelllänge) — dadurch geht das gezeichnete Gleis nahtlos in das
-       plastische unter dem Zug über.                                     */
+       Maßen, aus denen die Wagen ihre Spurweite nehmen (SB.mesh.GAUGE ×
+       Pixel je Modelllänge) — nur so stehen die Räder auf den Schienen und
+       nicht daneben.                                                     */
     if(RAILS){
       var G=MESH.GAUGE,px=vehicle.size;
       map.addLayer({id:'rail-bed',type:'line',source:'route',

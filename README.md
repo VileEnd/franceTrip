@@ -176,15 +176,14 @@ zum Schluss derselbe Kopfwagen um 180° gedreht. `size` ist dabei die Länge
 **eines Wagens** in Pixeln — der ganze Zug ist entsprechend `cars` mal so
 lang.
 
-**Das Gleis liegt auf der ganzen Strecke**, nicht nur unter dem Zug — aber
-in zwei Ausführungen. Über die Route hinweg als vier Linien-Layer
-(Schotterbett, Schwellenschraffur, zwei versetzte Schienen); das rechnet
-die GPU beim Linienzeichnen praktisch umsonst, während tausende Schwellen
-als Körper sinnlos teuer wären. Unter jedem Wagen liegt zusätzlich ein
-plastisches Gleisstück. Beide teilen sich die Maße in `SB.mesh.GAUGE`
-(halbe Breiten in Modelllängen), damit das gezeichnete Gleis nahtlos ins
-plastische übergeht und die Räder wirklich auf den Schienen laufen.
-`track:false` nimmt beides weg.
+**Das Gleis liegt auf der ganzen Strecke** und wird als Linie gezeichnet:
+vier Layer über die Route (Schotterbett, Schwellenschraffur, zwei versetzte
+Schienen). Das rechnet die GPU beim Linienzeichnen praktisch umsonst,
+während tausende Schwellen als Körper sinnlos teuer wären — und unter dem
+Zug noch einmal ein plastisches Gleisstück wäre dasselbe zweimal. Die
+Breiten kommen aus `SB.mesh.GAUGE` (halbe Breiten in Modelllängen), aus
+denen auch die Räder ihre Spurweite nehmen; nur so läuft der Zug wirklich
+auf seinen Schienen statt daneben. `track:false` nimmt das Gleis weg.
 
 Jeder Wagen wird **einzeln** auf die Route gesetzt, um genau seinen Abstand
 zur Zugspitze zurückversetzt. Dafür misst `js/map.js` die Route einmal in
