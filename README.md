@@ -164,7 +164,7 @@ lautlos auf `trainEmoji` zurück; `vehicle3d:false` erzwingt das Emoji.
 
 | `model` | Form |
 |---------|------|
-| `'ice'` | weißer Hochgeschwindigkeitszug, spitz zulaufend, roter Zierstreifen, Stromabnehmer |
+| `'ice'` | ICE 3: heruntergezogene Nase mit umlaufender Bugscheibe, Fensterband mit einzelnen Scheiben, roter Zierstreifen, grauer Dachrand, Drehgestelle mit Rädern, einarmiger Stromabnehmer |
 | `'train'` | Lok mit gelber Bugpartie + Wagen |
 | `'bus'` | Reisebus |
 | `'car'` | Auto |
@@ -184,8 +184,11 @@ Alle Modelle sind **parametrische Flächen**, keine Klötzchen: `SB.mesh.surface
 tastet eine Funktion `P(u,v)` ab und leitet die Normalen aus den Ableitungen
 ab — daher die weichen Kanten. Darauf setzen `revolve` (Rotationskörper),
 `sweep` (Rohr entlang einer Kurve) und `ring` (Fläche zwischen zwei Ringen)
-auf. Die Farbfunktion färbt jeden Punkt einzeln, so entstehen z. B. das
-Fensterband des ICE ohne zusätzliche Geometrie. `detail` regelt die
+auf. Die Farbfunktion färbt jeden Punkt einzeln — so entstehen Dachrand und
+Schürze des ICE ohne zusätzliche Geometrie. Wo eine Kante scharf stehen soll
+(Fensterband, Scheiben, Zierstreifen, Bugscheibe), liegt stattdessen eine
+hauchdünn nach außen versetzte Fläche auf der Hülle; sie folgt deren Rundung,
+darf sich mit ihresgleichen aber nicht überlappen. `detail` regelt die
 Segmentzahl: auf der Karte gröber, im eigenen Canvas feiner.
 
 ### Das 3D-T-Shirt

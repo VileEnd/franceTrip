@@ -162,68 +162,169 @@ function croissant(out,crust,toast){
 }
 
 /* ---- ICE -----------------------------------------------------------------
-   Ein durchgehender Wagenkasten als Fläche: der Querschnitt ist unten
-   flach und oben rund, zu beiden Enden läuft er weich zur Nase zusammen.
-   Fensterband, roter Streifen und Schürze entstehen über die Farbfunktion
-   statt über zusätzliche Geometrie — dadurch folgen sie der Rundung.      */
+   Vorbild ist der ICE 3: tief heruntergezogene Nase mit umlaufender
+   Bugscheibe, weißer Wagenkasten, roter Zierstreifen, grauer Dachrand.
+   Der Wagenkasten ist eine einzige parametrische Fläche — Dachkante,
+   Bodenkante und halbe Breite kommen aus je einer Stützstellen-Kurve über
+   den Abstand zum nächsten Ende. Vorn wie hinten sitzt also ein Kopf, so
+   wie bei einem echten Triebzug.
+   Alles Aufgesetzte — Fensterband, Scheiben, Streifen, Schürze, Lichter —
+   liegt als hauchdünn nach außen versetzte Fläche auf der Hülle und folgt
+   damit von selbst jeder Rundung. Überlappen darf sich davon nichts:
+   zwei Flächen auf gleicher Höhe würden gegeneinander flimmern.           */
 function ice(out,C){
   var shell=hexRGB(C.light,'#F4F2EE'),stripe=hexRGB(C.color,'#EC0016'),
       glass=hexRGB(C.glass,'#26313E'),accent=hexRGB(C.accent,'#FFD800'),
-      dark=[0.17,0.18,0.20],metal=[0.62,0.63,0.64];
-  var PT=3.2,PB=4.6;                             // Dachrundung / Bodenrundung
+      roofc=[0.74,0.75,0.76],trim=[0.87,0.86,0.84],
+      dark=[0.17,0.18,0.20],deep=[0.09,0.09,0.10],metal=[0.62,0.63,0.65];
+  var PT=3.7,PB=5.2;                     // Dachrundung / Bodenrundung
+  var OFF=0.0020,OFF2=0.0033;            // Versatz der aufgesetzten Flächen
+  /* s = Abstand zum nächsten Ende (0 = Nasenspitze, 0.5 = Wagenmitte). */
+  var TOP=[[0,0.112],[0.012,0.140],[0.030,0.188],[0.055,0.236],[0.086,0.270],
+           [0.125,0.291],[0.190,0.301],[0.5,0.303]],
+      BOT=[[0,0.098],[0.016,0.084],[0.045,0.078],[0.100,0.075],[0.5,0.074]],
+      WID=[[0,0.010],[0.010,0.040],[0.026,0.078],[0.050,0.110],[0.086,0.132],
+           [0.140,0.144],[0.220,0.148],[0.5,0.149]];
+  /* Die Flächen fragen denselben Schnitt mehrfach ab (Normalen!), deshalb
+     merkt sich prof den zuletzt berechneten — das spart die Kurvensuche. */
+  var _pk=[NaN,NaN,NaN,NaN],_pv=[],_pi=0;
   function prof(u){
-    var t=Math.min(u,1-u)/0.215;                 // 0 an den Spitzen, 1 im Wagen
-    var s=t>=1?1:Math.pow(smooth(t),0.46);
-    return {x:-0.5+u,hy:0.016+0.126*s,hz:0.020+0.092*s,zc:0.190-0.026*(1-s)};
+    for(var i=0;i<4;i++)if(_pk[i]===u)return _pv[i];
+    var s=Math.min(u,1-u),zt=curve(TOP,s),zb=curve(BOT,s);
+    _pi=(_pi+1)&3;_pk[_pi]=u;
+    return _pv[_pi]={x:-0.5+u,s:s,hy:curve(WID,s),hz:(zt-zb)/2,zc:(zt+zb)/2};
   }
-  function P(u,v,off){
-    var pr=prof(u),a=v*Math.PI*2,p=(Math.sin(a)>=0)?PT:PB,k=off||1;
-    return [pr.x,se(a,p)*pr.hy*k,pr.zc+sez(a,p)*pr.hz*k];
+  /* Punkt auf der Hülle. a läuft um den Querschnitt: 0 = rechte Flanke,
+     π/2 = Dach, −π/2 = Boden.                                            */
+  function Pa(u,a){
+    var pr=prof(u),p=(Math.sin(a)>=0)?PT:PB;
+    return [pr.x,se(a,p)*pr.hy,pr.zc+sez(a,p)*pr.hz];
   }
-  surface(out,P,seg(56),seg(26),function(u,v,p,n){
-    var pr=prof(u),h=(p[2]-pr.zc)/pr.hz;
-    return h<-0.66?dark:shell;                   // Schürze unten
-  });
-  // Enden schließen
-  [0,1].forEach(function(e){
-    ring(out,function(v){return P(e,v);},function(){var pr=prof(e);
-      return [pr.x+(e?0.010:-0.010),0,pr.zc];},2,seg(26),
-      function(){return shell;},{flip:!e});
-  });
-  /* Zierbänder als eigene, hauchdünn abgehobene Flächen — nur so bleiben
-     die Kanten scharf. Höhe h ist auf den Querschnitt bezogen (−1 unten,
-     +1 oben), deshalb laufen die Bänder von selbst mit der Nase zusammen. */
-  function band(h0,h1,col,side,nu){
-    function ang(h){
-      var a=Math.asin(sgn(h)*Math.pow(Math.min(Math.abs(h),1),PT/2));
-      return side>0?a:(Math.PI-a);
-    }
+  /* Derselbe Punkt, e nach außen geschoben. Die Normale kommt numerisch —
+     nur so hebt sich auch die stark geneigte Nase sauber ab (radial nach
+     außen wäre dort fast tangential und würde flimmern).                  */
+  function push(u,a,e){
+    var d=0.0022,p=Pa(u,a),
+        du=vsub(Pa(Math.min(u+d,1),a),Pa(Math.max(u-d,0),a)),
+        n=vnorm(vcross(vsub(Pa(u,a+d),Pa(u,a-d)),du));
+    return [p[0]+n[0]*e,p[1]+n[1]*e,p[2]+n[2]*e];
+  }
+  /* Höhe im Querschnitt (−1 unten … +1 oben) → Winkel a. */
+  function ang(h){
+    h=Math.max(-1,Math.min(1,h));
+    return Math.asin(sgn(h)*Math.pow(Math.abs(h),(h>=0?PT:PB)/2));
+  }
+  /* Aufgesetztes Feld zwischen zwei Winkeln. Läuft der u- oder der
+     a-Bereich rückwärts, zeigt die Normale nach innen — deshalb die
+     Vorzeichenprobe fürs Umdrehen.                                        */
+  function arc(u0,u1,a0,a1,col,nu,nv,e){
+    var f=(typeof col==='function')?col:function(){return col;};
+    surface(out,function(u,v){return push(mix(u0,u1,u),mix(a0,a1,v),e||OFF);},
+      seg(nu),seg(nv),f,null,{openV:true,flip:(u1-u0)*(a1-a0)<0});
+  }
+  /* Feld auf einer Flanke (side +1 rechts) zwischen zwei Höhen. */
+  function pane(u0,u1,h0,h1,side,col,nu,nv,e){
     var a0=ang(h0),a1=ang(h1);
-    surface(out,function(u,v){
-      var pr=prof(u),a=mix(a0,a1,v);
-      return [pr.x,se(a,PT)*pr.hy*1.007,pr.zc+sez(a,PT)*pr.hz*1.007];
-    },seg(nu||56),seg(5),function(){return col;},null,{openV:true});
+    if(side<0){a0=Math.PI-a0;a1=Math.PI-a1;}
+    arc(u0,u1,a0,a1,col,nu||6,nv||5,e);
   }
-  [1,-1].forEach(function(side){
-    band(0.02,0.17,stripe,side);                // roter Zierstreifen
-    band(0.21,0.74,glass,side);                  // Fensterband
+
+  /* ---- Wagenkasten ---- */
+  surface(out,function(u,v){return Pa(u,v*Math.PI*2);},seg(68),seg(28),
+    function(u,v,p){
+      var pr=prof(u),h=(p[2]-pr.zc)/pr.hz;
+      return h<-0.78?dark:(h>0.90?roofc:shell);   // Dachhaut leicht grau
+    });
+  [0,1].forEach(function(e){                      // Nasenspitzen schließen
+    ring(out,function(v){return Pa(e,v*Math.PI*2);},
+      function(){var pr=prof(e);return [pr.x+(e?0.009:-0.009),0,pr.zc];},
+      2,seg(20),function(){return shell;},{flip:!e});
   });
-  // Spitzenlichter: kurze helle Felder ganz vorn
-  function lamp(u0,u1,side){
+
+  /* ---- Schürze und Zierstreifen ---- */
+  arc(0.035,0.965,ang(-0.82),-Math.PI-ang(-0.82),dark,44,5);
+  [1,-1].forEach(function(side){pane(0.035,0.965,-0.66,-0.42,side,stripe,48,4);});
+
+  /* ---- Fensterband ---------------------------------------------------
+     Zur Kabine hin zieht die Unterkante nach unten und trifft dort auf
+     die Unterkante der Bugscheibe — daraus wird das große, tiefergezogene
+     Seitenfenster des Triebkopfs.                                        */
+  [1,-1].forEach(function(side){
     surface(out,function(u,v){
-      var pr=prof(mix(u0,u1,u)),a=mix(-0.62,-0.16,v);
-      a=side>0?a:(Math.PI-a);
-      return [pr.x,se(a,PT)*pr.hy*1.010,pr.zc+sez(a,PT)*pr.hz*1.010];
-    },4,4,function(){return accent;},null,{openV:true});
+      var uu=mix(0.055,0.945,u),s=Math.min(uu,1-uu),
+          lo=mix(0.10,0.24,smooth((s-0.055)/0.070)),
+          a=mix(ang(lo),ang(0.72),v);
+      return push(uu,side>0?a:(Math.PI-a),OFF);
+    },seg(66),seg(7),function(){return glass;},null,{openV:true,flip:side<0});
+  });
+  /* Stege zwischen den Scheiben und Türen — dadurch zerfällt das Band in
+     einzelne Fenster, statt als schwarzer Balken durchzulaufen.          */
+  var EDGES=[0.078,0.22,0.50,0.78,0.922];
+  [1,-1].forEach(function(side){
+    [0.22,0.50,0.78].forEach(function(u){      // Türen: Steg bis unters Band
+      pane(u-0.007,u+0.007,-0.42,0.74,side,trim,4,7,OFF2);
+    });
+    for(var i=0;i<EDGES.length-1;i++){
+      var a=EDGES[i],b=EDGES[i+1],n=Math.max(2,Math.round((b-a)/0.058));
+      for(var j=1;j<n;j++){
+        var u=a+(b-a)*j/n;
+        pane(u-0.005,u+0.005,0.235,0.715,side,trim,4,4,OFF2);
+      }
+    }
+  });
+
+  /* ---- Köpfe: Bugscheibe, roter Bug, Spitzenlichter ------------------
+     Die Bugscheibe läuft von Wange zu Wange über das Dach. Ihre Unterkante
+     steigt nach hinten an und geht genau dort ins Fensterband über.      */
+  function head(e){
+    function U(s){return e>0?1-s:s;}
+    surface(out,function(u,v){
+      var lo=mix(-0.34,0.10,smooth(u)),a=mix(ang(lo),Math.PI-ang(lo),v);
+      return push(U(mix(0.006,0.055,u)),a,OFF);
+    },seg(10),seg(26),function(){return glass;},null,{openV:true,flip:e>0});
+    arc(U(0.000),U(0.035),ang(-0.44),-Math.PI-ang(-0.44),stripe,6,14);
+    [1,-1].forEach(function(side){
+      pane(U(0.048),U(0.020),-0.38,-0.10,side,
+        function(u,v){return v<0.62?accent:stripe;},4,6,OFF2);
+    });
   }
-  lamp(0.972,0.996,1);lamp(0.972,0.996,-1);
-  box(out,-0.455,0.455,-0.112,0.112,0.000,0.060,dark);             // Untergestell
-  box(out,-0.31,-0.23,-0.100,0.100,0.000,0.030,[0.10,0.10,0.11]);  // Drehgestelle
-  box(out,0.23,0.31,-0.100,0.100,0.000,0.030,[0.10,0.10,0.11]);
-  box(out,-0.115,0.020,-0.026,0.026,0.278,0.290,dark);             // Stromabnehmer
-  sweep(out,function(t){return [mix(-0.10,0.03,t),0,mix(0.290,0.336,t)];},
+  head(1);head(-1);
+
+  /* ---- Untergestell, Drehgestelle, Räder ---- */
+  function wheel(x,y0,r,w){
+    var z0=r+0.002;
+    function W(u,v){var a=v*Math.PI*2;
+      return [x+r*Math.cos(a),y0+(u-0.5)*w,z0+r*Math.sin(a)];}
+    surface(out,W,3,seg(12),function(){return deep;},null,{flip:true});
+    [0,1].forEach(function(e){
+      ring(out,function(v){return W(e,v);},
+        function(){return [x,y0+(e-0.5)*w,z0];},
+        2,seg(12),function(u){return u>0.55?metal:deep;},{flip:!e});
+    });
+  }
+  box(out,-0.42,0.42,-0.072,0.072,0.034,0.076,deep);
+  [-0.30,0.30].forEach(function(x){
+    box(out,x-0.078,x+0.078,-0.098,0.098,0.020,0.072,dark);
+    [1,-1].forEach(function(s){
+      wheel(x-0.048,s*0.100,0.036,0.020);
+      wheel(x+0.048,s*0.100,0.036,0.020);
+    });
+  });
+
+  /* ---- Dach: Aufbauten und einarmiger Stromabnehmer ---- */
+  box(out,-0.360,-0.270,-0.056,0.056,0.292,0.307,roofc);
+  box(out, 0.270, 0.360,-0.056,0.056,0.292,0.307,roofc);
+  box(out,-0.150, 0.030,-0.054,0.054,0.292,0.306,dark);            // Wanne
+  [-0.126,0.008].forEach(function(x){[1,-1].forEach(function(s){
+    ball(out,x,s*0.038,0.316,0.012,0.012,0.014,metal,8);           // Isolatoren
+  });});
+  sweep(out,function(t){return [mix(-0.118,0.012,t),0,mix(0.310,0.352,t)];},
         function(){return 0.008;},[0,1,0],4,seg(8),function(){return metal;});
-  box(out,-0.02,0.05,-0.058,0.058,0.334,0.344,metal);
+  sweep(out,function(t){return [mix(0.012,-0.078,t),0,mix(0.352,0.374,t)];},
+        function(){return 0.0065;},[0,1,0],4,seg(8),function(){return metal;});
+  box(out,-0.098,-0.058,-0.062,0.062,0.374,0.380,dark);            // Schleifstück
+  box(out,-0.094,-0.062,-0.074,-0.062,0.374,0.388,dark);           // Hörner
+  box(out,-0.094,-0.062, 0.062, 0.074,0.374,0.388,dark);
 }
 
 /* ---- Fahrzeuge ----------------------------------------------------------
