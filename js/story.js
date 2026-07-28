@@ -57,15 +57,18 @@ function render(p){
   var map=SB.mapCtl.map;
   var tt=ease(clamp(local/.7,0,1));
   var f=lerp(s.f0,s.f1,tt),pos=route.pointAt(f);
-  map.getSource('train').setData({type:'Feature',geometry:{type:'Point',coordinates:pos}});
+  // Blickpunkt kurz voraus → daraus leitet die Karte die Fahrtrichtung
+  // (und damit die Ausrichtung des 3D-Modells) ab.
+  SB.mapCtl.setVehicle(pos,route.pointAt(Math.min(f+0.0015,1)));
   var t=f*route.LEN,coords=[route.R[0]];
   for(var k=1;k<route.cum.length;k++){if(route.cum[k]<=t)coords.push(route.R[k]);else break;}
   coords.push(pos);
   map.getSource('done').setData({type:'Feature',geometry:{type:'LineString',coordinates:coords}});
   var cl=ease(local);
   // Flachere Kamera auf schwachen Geräten = weniger sichtbare Tiles.
-  var pitchK=SB.lowPower?0.5:1;
-  map.jumpTo({center:pos,zoom:lerp(s.z0,s.z1,cl),
+  var pitchK=(SB.trip.map&&SB.trip.map.pitchScale)||(SB.lowPower?0.5:1);
+  // Zoom kommt aus der Karten-Strategie (Standard: konstant, siehe map.js).
+  map.jumpTo({center:pos,zoom:SB.mapCtl.zoomAt(s,cl),
     pitch:SB.reduced?0:lerp(s.p0,s.p1,cl)*pitchK,
     bearing:SB.reduced?0:lerp(s.b0,s.b1,cl)});
 }

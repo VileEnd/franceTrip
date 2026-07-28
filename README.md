@@ -59,8 +59,16 @@ SB.trip = {
   //     floaties: schwebende Emojis in Hero & RSVP (auch Krümel-Regen-Default).
 
   map: {                               // alles optional
-    trainEmoji:'🚆', routeColor:'#EC0016', doneColor:'#FFD800',
-    stopColor:'#EC0016', bg:'#EFEDE8', terrain:false   // terrain:false = kein 3D
+    zoomMode:'fixed',                  // 'fixed' | 'steps' | 'scenes' – siehe unten
+    zoom: 9.6,                         // Reise-Zoom für 'fixed'
+    vehicle:{ model:'train',           // 'train' | 'bus' | 'car'
+              color:'#EC0016', accent:'#FFD800', glass:'#26313E',
+              light:'#F2F0EA', size:96 },   // size = Bildschirmgröße in px
+    vehicle3d:false,                   // → flaches Emoji statt 3D-Modell
+    trainEmoji:'🚆',                   // nur für die Emoji-Variante
+    routeColor:'#EC0016', doneColor:'#FFD800', stopColor:'#EC0016',
+    bg:'#EFEDE8', terrain:false,       // terrain:false = kein 3D-Gelände
+    pitchScale: 1                      // Kamera-Neigung dämpfen (0…1)
   },
 
   route: {
@@ -113,6 +121,31 @@ SB.trip = {
   footer: 'HTML-String'
 };
 ```
+
+### Zoom-Strategie (`map.zoomMode`)
+
+Rasterkarten laden pro Zoomstufe einen komplett neuen Kachelsatz. Zoomt die
+Kamera durchgehend rein und raus, lädt und verwirft der Browser die ganze
+Fahrt über Kacheln — mit 3D-Gelände kommt pro Stufe noch ein neues Höhengitter
+dazu. Genau das ruckelt. Deshalb:
+
+| Modus | Verhalten | Kosten |
+|-------|-----------|--------|
+| `'fixed'` *(Standard)* | ein Zoom für die ganze Reise (`map.zoom`), Kamera schwenkt/neigt/dreht nur | am ruhigsten & schnellsten |
+| `'steps'` | eine feste Stufe **pro Szene** (aus `z0`/`z1` gemittelt, auf halbe Stufen gerundet) — Wechsel nur an Szenengrenzen | Mittelweg |
+| `'scenes'` | die durchgehend animierten Zoomfahrten aus `z0`→`z1` | filmisch, aber am teuersten |
+
+`z0`/`z1` der Szenen bleiben in jedem Fall stehen — sie werden nur von
+`'fixed'` ignoriert.
+
+### Das 3D-Fahrzeug
+
+Das Fahrzeug ist ein kleines Klötzchen-Modell in reinem WebGL (MapLibre-
+Custom-Layer) — keine Fremdbibliothek, kein Modell-Download, kein Build.
+Es zeigt immer in Fahrtrichtung, bleibt bei jedem Zoom gleich groß
+(`vehicle.size` in Bildschirm-Pixeln) und wird über `vehicle.color` /
+`accent` / `glass` / `light` eingefärbt. Klappt WebGL nicht, fällt die Karte
+lautlos auf `trainEmoji` zurück; `vehicle3d:false` erzwingt das Emoji.
 
 ### Tipps fürs Routen-Bauen
 

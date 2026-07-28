@@ -32,8 +32,16 @@ SB.trip={
   },
 
   map:{
+    /* Zoom bleibt die ganze Fahrt konstant — die Karte lädt ihre Kacheln
+       dann einmal statt bei jeder Zoomstufe neu. 'steps' = feste Stufe pro
+       Szene, 'scenes' = die alten, durchgehenden Zoomfahrten. */
+    zoomMode:'fixed',
+    zoom:9.6,
+    /* 3D-Fahrzeug: 'train' | 'bus' | 'car'. vehicle3d:false = Emoji. */
+    vehicle:{model:'train',color:'#EC0016',accent:'#FFD800',glass:'#26313E'},
     trainEmoji:'🚆'
-    // Optional überschreibbar: routeColor, doneColor, stopColor, bg, terrain:false
+    // Optional überschreibbar: routeColor, doneColor, stopColor, bg,
+    //   terrain:false, pitchScale, vehicle3d:false
   },
 
   /* Route als [Lng,Lat]-Punkte, Hin- und Rückweg. stopIdx = Indizes der
