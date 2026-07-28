@@ -268,15 +268,18 @@ und bei `prefers-reduced-motion` bleibt sie stehen.
 
 `js/zucker.js` hängt ganz ans Ende von `#content` — also direkt vor das
 RSVP — eine gezeichnete Szene: eine Zuckerdose marschiert von links nach
-rechts zur Teetasse, klappt den Deckel auf, kippt und schüttet Zucker nach.
-Vier Runden lang, die Tasse wird jedes Mal voller, zum Schluss quillt sie
-über. Unter der Bühne steht je Runde eine Zeile aus `captions`, ein Tipp auf
-die Szene startet sie neu.
+rechts zur Teetasse. Sie hat zwei Arme; der linke hebt den Deckel hoch, der
+rechte schwenkt den Löffel über die Tasse und kippt ihn aus, worauf feiner
+Zucker in die Tasse rieselt. Vier Runden lang, die Tasse wird jedes Mal
+voller, zum Schluss quillt sie über. Unter der Bühne steht je Runde eine
+Zeile aus `captions`, ein Tipp auf die Szene startet sie neu.
 
 Gezeichnet ist alles als Trickfilm-Cel: gemalter, stillstehender
 Hintergrund, darüber flache Farbflächen mit Tuschekontur, dazu Vignette und
-Filmkorn. Bewegt wird mit 12 Zeichnungen je Sekunde („auf Zweien"), nicht
-mit CSS-Keyframes — `zustand(t)` beschreibt die Szene für jeden Zeitpunkt.
+Filmkorn. Ein Rausch-Filter verschiebt die Kanten minimal, damit die Linien
+nach Hand und nicht nach Kurvenlineal aussehen — auf Handys bleibt er aus.
+Bewegt wird mit 12 Zeichnungen je Sekunde („auf Zweien"), nicht mit
+CSS-Keyframes: `zustand(t)` beschreibt die Szene für jeden Zeitpunkt.
 Deshalb sind Standbild bei `prefers-reduced-motion`, Neustart per Klick und
 das Pausieren außerhalb des Bildschirms derselbe Codepfad.
 

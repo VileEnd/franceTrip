@@ -183,7 +183,7 @@ footer b{color:#fff}
    flach kolorierte Figuren mit Tuschekontur, einer Schattenfläche und einem
    Glanzlicht — plus Vignette und Filmkorn. Bewegt wird per transform-Attribut
    in js/zucker.js, mit 12 Zeichnungen pro Sekunde („auf Zweien").            */
-.zuckerblock{background:linear-gradient(180deg,#fff 0%,#F4F1EE 100%);overflow:hidden}
+.zuckerblock{background:linear-gradient(180deg,#fff 0%,#F4F1EE 100%);overflow:hidden;padding-top:48px}
 #zuckerbuehne{max-width:760px;margin:0 auto;cursor:pointer;user-select:none;-webkit-user-select:none}
 #zuckersvg{width:100%;height:auto;display:block;border-radius:10px;
   box-shadow:0 22px 50px rgba(27,31,38,.34),0 0 0 1px rgba(27,31,38,.25)}
@@ -198,25 +198,32 @@ footer b{color:#fff}
 .zk-platte{fill:url(#zkPlatte)}
 .zk-plattenlicht{fill:none;stroke:#FFFCF3;stroke-width:3;opacity:.5}
 .zk-vignette{fill:url(#zkVignette);pointer-events:none}
-.zk-korn{opacity:.11;mix-blend-mode:overlay;pointer-events:none}
+.zk-korn{opacity:.16;mix-blend-mode:overlay;pointer-events:none}
 
-/* Cel-Figuren: Tuschelinie, flache Farbe, eine Schattenfläche, ein Glanz */
+/* Cel-Figuren: Tuschelinie, flache Farbe, eine Schattenfläche, ein Glanz.
+   Farben nach den Filmbildern: mattes Porzellanblau, fast schwarze Kontur,
+   der Henkel als helle Schnecke auf dem Bauch, Löffel in Blauviolett.       */
 .zk-schlagschatten{fill:rgba(42,36,22,.34)}   /* Deckkraft steuert JS über das opacity-Attribut */
-.zk-keramik{fill:#8CD2E6;stroke:#20344F;stroke-width:2.8;stroke-linejoin:round;stroke-linecap:round}
-.zk-ton{fill:#5FAECA;opacity:.85}
-.zk-glanzflaeche{fill:#D9F2FA;opacity:.8}
-.zk-innen{fill:#2E6B8C;stroke:#20344F;stroke-width:2.8}
-.zk-ring{fill:none;stroke:#5FAECA;stroke-width:2.2}
-.zk-randlinie{fill:none;stroke:#20344F;stroke-width:2.8}
-.zk-henkel-um{fill:none;stroke:#20344F;stroke-width:12.5;stroke-linecap:round}
-.zk-henkel{fill:none;stroke:#8CD2E6;stroke-width:7;stroke-linecap:round}
-.zk-stiel{fill:none;stroke:#3E3F8C;stroke-width:5.5;stroke-linecap:round}
-.zk-loeffelkopf{fill:#4B4CA8;stroke:#23234F;stroke-width:2.4}
-.zk-loeffelglanz{fill:none;stroke:#9A9BD8;stroke-width:2;stroke-linecap:round;opacity:.9}
-.zk-fuellung{fill:#FDFBF2;stroke:#20344F;stroke-width:2;stroke-linejoin:round}
-.zk-flaeche{fill:#FFFEF8;stroke:#20344F;stroke-width:2}
+.zk-keramik{fill:#7FBAD2;stroke:#131C24;stroke-width:3.8;stroke-linejoin:round;stroke-linecap:round}
+.zk-ton{fill:#5C9BB6;opacity:.9}
+.zk-locke{fill:none;stroke:#A9D8E6;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.zk-glanzflaeche{fill:#B9E0EE;opacity:.75}
+.zk-innen{fill:#2C6580;stroke:#131C24;stroke-width:3.6}
+.zk-ring{fill:none;stroke:#5C9BB6;stroke-width:2.2}
+.zk-randlinie{fill:none;stroke:#131C24;stroke-width:3.6}
+.zk-henkel-um{fill:none;stroke:#131C24;stroke-width:14;stroke-linecap:round}
+.zk-henkel{fill:none;stroke:#7FBAD2;stroke-width:7;stroke-linecap:round}
+.zk-stiel-um{fill:none;stroke:#131C24;stroke-width:7.5;stroke-linecap:round}
+.zk-stiel{fill:none;stroke:#8E93C8;stroke-width:3.4;stroke-linecap:round}
+.zk-arm-um{fill:none;stroke:#131C24;stroke-width:8.5;stroke-linecap:round}
+.zk-arm{fill:none;stroke:#7FBAD2;stroke-width:4.5;stroke-linecap:round}
+.zk-hand{fill:#A9D8E6;stroke:#131C24;stroke-width:2.6}
+.zk-loeffelkopf{fill:#6C74B4;stroke:#131C24;stroke-width:3.2;stroke-linejoin:round}
+.zk-loeffelglanz{fill:none;stroke:#A6ABDC;stroke-width:2;stroke-linecap:round;opacity:.9}
+.zk-fuellung{fill:#FDFBF2;stroke:#131C24;stroke-width:2.4;stroke-linejoin:round}
+.zk-flaeche{fill:#FFFEF8;stroke:#131C24;stroke-width:2.4}
 .zk-zuckerton{fill:#DDDCCB;opacity:.9}
-.zk-korn-zucker{fill:#FDFBF2;stroke:#20344F;stroke-width:1.4}
+.zk-korn-zucker{fill:#FFFDF4;stroke:#131C24;stroke-width:.9}
 .zk-krumel{fill:none;stroke:#C9C7B4;stroke-width:1.5}
 .zk-funke{fill:#FFF3B0}
 .zk-cap{margin-top:12px;text-align:center;font-family:'Caveat',cursive;color:var(--tinte);font-size:1.5rem;line-height:1.2;min-height:1.3em}
