@@ -53,6 +53,14 @@ if(!SB.reduced){
       f.style.fontSize=(1.1+Math.random()*1.2)+'rem';
       host.appendChild(f);
     }
+    /* Außerhalb des Bildes anhalten: die Emojis schweben sonst die ganze
+       Kartenfahrt über unsichtbar weiter und kosten in jedem Bild
+       Compositing — genau dann, wenn die Karte jede Millisekunde braucht. */
+    if(window.IntersectionObserver){
+      new IntersectionObserver(function(es){
+        host.classList.toggle('ruht',!es[0].isIntersecting);
+      },{rootMargin:'120px'}).observe(host);
+    }
   });
 }
 

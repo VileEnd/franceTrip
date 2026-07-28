@@ -43,6 +43,87 @@ var COLORS={
 var loading=document.getElementById('loading');
 SB.mapCtl={map:null,ready:false};
 
+/* ---- Kacheln: Adressen, Auflösung ---------------------------------------
+   Die Adressen baut die Engine an zwei Stellen: hier für den Vorrat (siehe
+   unten) und unten im Style für MapLibre. Beide MÜSSEN Zeichen für Zeichen
+   dieselben sein — sonst holt der Browser jede Kachel zweimal.
+   @2x-Kacheln haben die vierfache Pixelmenge. Auf einem 1×-Bildschirm ist das
+   reine Verschwendung: das Bild wird sofort wieder heruntergerechnet. */
+var TILE_HOSTS=['a','b','c'];
+var TILE_SUF=(!SB.isMobile&&(window.devicePixelRatio||1)>1.2)?'@2x':'';
+var TILE_URL=TILE_HOSTS.map(function(h){
+  return 'https://'+h+'.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+TILE_SUF+'.png';
+});
+function tileUrl(z,x,y){
+  var n=1<<z;
+  if(y<0||y>=n)return null;              // über Pol / unter Pol gibt es nichts
+  x=((x%n)+n)%n;                         // Weltumlauf, wie MapLibre ihn rechnet
+  // Host-Verteilung exakt wie in MapLibre: urls[(x+y) % urls.length]
+  return TILE_URL[(x+y)%TILE_URL.length]
+    .replace('{z}',z).replace('{x}',x).replace('{y}',y);
+}
+/* Lng/Lat → Kachelnummer (Web-Mercator, Standardformel). */
+function lngLatTile(z,lng,lat){
+  var n=1<<z,s=Math.sin(lat*Math.PI/180);
+  s=Math.max(Math.min(s,0.9999),-0.9999);
+  return [Math.floor((lng+180)/360*n),
+          Math.floor((0.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n)];
+}
+/* Welche Kachel-Stufe zeigt MapLibre bei diesem Zoom? Für 256er-Kacheln ist
+   es eine Stufe feiner als der Kartenzoom, kaufmännisch gerundet — genau die
+   Rechnung aus MapLibres coveringZoomLevel(). */
+function tileZoom(zoom){
+  return Math.max(0,Math.min(18,Math.round(zoom+1)));
+}
+
+/* ---- Kacheln auf Vorrat holen -------------------------------------------
+   Die Karte wartet beim Start auf zwei Dinge: die Bibliothek (groß) und die
+   ersten Kacheln (viele). Das läuft normalerweise NACHEINANDER — erst wenn
+   maplibre-gl.js da ist, weiß der Browser überhaupt, welche Bilder er braucht.
+   Die Adressen kennen wir aber schon vorher: Startpunkt und Zoom stehen im
+   Trip. Also holen wir sie parallel zur Bibliothek in den HTTP-Cache; wenn
+   MapLibre sie dann anfordert, liegen sie bereits da.
+
+   Dasselbe während der Fahrt: die Kamera folgt einer bekannten Linie, also
+   holen wir immer ein Stück Strecke im Voraus. Es sind exakt dieselben
+   Kacheln, die die Karte Sekunden später ohnehin lädt — nur eben früh genug,
+   dass unterwegs nichts mehr grau bleibt. Mehr Daten werden dadurch NICHT
+   geladen, sie kommen nur früher.
+
+   Bei „Datensparen“ und auf 2G bleibt der Vorrat aus.                      */
+var PRE={queue:[],seen:{},busy:0,max:SB.isMobile?3:5,last:0,lastF:-1,aus:false};
+(function(){
+  var c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  if(!window.fetch||(c&&(c.saveData||/(^|-)2g$/.test(c.effectiveType||''))))PRE.aus=true;
+})();
+function preQueue(z,x,y){
+  if(PRE.queue.length>=40)return;        // Warteschlange kurz halten …
+  var k=z+'/'+x+'/'+y;
+  if(PRE.seen[k])return;                 // … und nichts doppelt holen
+  var u=tileUrl(z,x,y);
+  if(!u)return;
+  PRE.seen[k]=1;PRE.queue.push(u);
+}
+function prePump(){
+  while(PRE.busy<PRE.max&&PRE.queue.length){
+    PRE.busy++;
+    var fertig=function(){PRE.busy--;prePump();};
+    /* Ohne Optionen: genau der Request, den MapLibre später stellt
+       (GET, mode 'cors', credentials 'same-origin') — nur so ist es
+       derselbe Cache-Eintrag. Der Body wird gelesen und weggeworfen. */
+    fetch(PRE.queue.shift()).then(function(r){return r.blob();}).then(fertig,fertig);
+  }
+}
+/* Rechteck um eine Mittelkachel, von innen nach außen — das Bild füllt sich
+   dann von der Mitte her, nicht in Zeilen. */
+function preBlock(z,cx,cy,rx,ry){
+  var rmax=Math.max(rx,ry);
+  for(var r=0;r<=rmax;r++)
+    for(var dx=-rx;dx<=rx;dx++)
+      for(var dy=-ry;dy<=ry;dy++)
+        if(Math.max(Math.abs(dx),Math.abs(dy))===r)preQueue(z,cx+dx,cy+dy);
+}
+
 /* ---- Zoom-Strategie ----------------------------------------------------- */
 var zoomMode=M.zoomMode||'fixed';
 var cruiseZoom=(typeof M.zoom==='number')?M.zoom:9.6;
@@ -57,6 +138,44 @@ SB.mapCtl.zoomAt=function(s,t){
   return cruiseZoom;
 };
 var startZoom=SB.mapCtl.zoomAt(SB.scenes[0],0);
+
+/* Der erste Blick: genau die Kacheln, die das erste Bild bedeckt — berechnet
+   aus Bühnengröße und Startzoom, noch während die Bibliothek lädt. */
+function warmStart(){
+  if(PRE.aus)return;
+  var z=tileZoom(startZoom);
+  var st=document.getElementById('stage');
+  var w=(st&&st.clientWidth)||window.innerWidth||1024,
+      h=(st&&st.clientHeight)||window.innerHeight||768;
+  var px=256*Math.pow(2,startZoom+1-z);      // Bildschirmpixel je Kachel
+  var t=lngLatTile(z,R[0][0],R[0][1]);
+  preBlock(z,t[0],t[1],Math.min(4,Math.ceil(w/2/px)),Math.min(4,Math.ceil(h/2/px)));
+  prePump();
+}
+/* Während der Fahrt: ein Stück Strecke voraus, ein paar Kacheln breit
+   (das Sichtfeld ist breiter als die Linie). Gedrosselt, damit das Planen
+   nicht in jedem Bild passiert. */
+var LOOK=0.05,   // Anteil der Gesamtstrecke, der vorausgeholt wird
+    SCHRITT=0.006,
+    BAND=2;      // Kacheln links/rechts der Strecke
+function preAhead(f){
+  var map=SB.mapCtl.map;
+  if(PRE.aus||!map)return;
+  var jetzt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  if(jetzt-PRE.last<350||Math.abs(f-PRE.lastF)<0.002)return;
+  PRE.last=jetzt;PRE.lastF=f;
+  /* Vorrat ist Kür: solange die Karte noch am Bild von JETZT arbeitet, darf
+     ihr der Vorrat keine Leitung wegnehmen. Beim nächsten Anlauf (350 ms)
+     wird es erneut versucht. */
+  if(map.areTilesLoaded&&!map.areTilesLoaded())return;
+  var z=tileZoom(map.getZoom());
+  for(var d=0;d<=LOOK;d+=SCHRITT){
+    var p=route.pointAt(Math.min(f+d,1)),t=lngLatTile(z,p[0],p[1]);
+    for(var dx=-BAND;dx<=BAND;dx++)
+      for(var dy=-BAND;dy<=BAND;dy++)preQueue(z,t[0]+dx,t[1]+dy);
+  }
+  prePump();
+}
 
 /* ---- Fahrzeug ------------------------------------------------------------ */
 var V=M.vehicle||{};
@@ -362,20 +481,43 @@ SB.mapCtl.setVehicle=function(pos,ahead,f){
   if(!has3d&&map&&map.getSource('train')){
     map.getSource('train').setData({type:'Feature',geometry:{type:'Point',coordinates:pos}});
   }
+  if(typeof f==='number')preAhead(f);
 };
 
+/* ---- Bibliothek nachladen ------------------------------------------------
+   maplibre-gl.js stand früher als blockierendes <script> im Body: die halbe
+   Seite wartete auf ein Paket, das erst gebraucht wird, wenn die Karte dran
+   ist. Jetzt hängt es diese Funktion ein — der Preload im <head> hat den
+   Download da längst angestoßen, hier wird er nur noch abgeholt.          */
+var LIB='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
+function ladeLib(fertig){
+  if(typeof maplibregl!=='undefined')return fertig(true);
+  var s=document.createElement('script');
+  s.src=LIB;s.async=true;
+  s.onload=function(){fertig(typeof maplibregl!=='undefined');};
+  s.onerror=function(){fertig(false);};
+  (document.head||document.body).appendChild(s);
+}
+
 function boot(){
-  if(typeof maplibregl==='undefined'){loading.textContent='Karte offline — bitte mit Internet öffnen. Der Rest fährt trotzdem.';return;}
+  warmStart();                    // Kacheln parallel zur Bibliothek holen
+  ladeLib(function(ok){
+    if(!ok){loading.textContent='Karte offline — bitte mit Internet öffnen. Der Rest fährt trotzdem.';return;}
+    starteKarte();
+  });
+}
+
+function starteKarte(){
+  // Erst hier: measureRoute() rechnet in Mercator und braucht dafür maplibregl.
   measureRoute();
-  var suf=SB.isMobile?'':'@2x';   // normale Tiles auf Phones = ein Viertel der Pixel
   var map=new maplibregl.Map({container:'map',interactive:false,
     pixelRatio:Math.min(window.devicePixelRatio||1,SB.isMobile?1.5:2),
     center:R[0].slice(),zoom:startZoom,pitch:0,bearing:0,
     maxTileCacheSize:SB.isMobile?512:2048,fadeDuration:0,antialias:false,
-    style:{version:8,sources:{carto:{type:'raster',tiles:[
-      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png',
-      'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png',
-      'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}'+suf+'.png'],
+    // Einmal geholte Kacheln bleiben gültig: die Fahrt dauert Minuten, ein
+    // erneutes Laden wegen abgelaufener Cache-Header bringt nichts als Traffic.
+    refreshExpiredTiles:false,
+    style:{version:8,sources:{carto:{type:'raster',tiles:TILE_URL,
       tileSize:256,maxzoom:18,attribution:'© OpenStreetMap-Mitwirkende © CARTO'}},
     layers:[{id:'bg',type:'background',paint:{'background-color':COLORS.bg}},
       {id:'carto',type:'raster',source:'carto',paint:{'raster-fade-duration':0}}]}});
@@ -435,6 +577,11 @@ function boot(){
     }
     addHitArea();
     SB.mapCtl.ready=true;loading.classList.add('aus');
+    /* Ladeanzeige nach dem Ausblenden ganz aus dem Bild nehmen: eine
+       bildschirmfüllende Fläche über der Karte kostet sonst in jedem Bild
+       Compositing — unsichtbar, aber nicht umsonst. */
+    setTimeout(function(){if(loading.classList.contains('aus'))loading.style.display='none';},900);
+    preAhead(0);                       // Vorrat für die erste Etappe anlegen
     SB.requestRender&&SB.requestRender();
   });
   map.on('error',function(){});

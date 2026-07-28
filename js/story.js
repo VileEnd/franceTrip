@@ -56,27 +56,37 @@ function wake(){if(!raf){lastTs=null;raf=requestAnimationFrame(tick);}}
      pro Sekunde sein, ein paar Mal pro Sekunde reicht fürs Auge.
    * Die Story-Karten wurden pro Bild alle zehn angefasst. Jetzt wird nur
      noch die sichtbare Karte geschrieben (und die vorherige einmal
-     zurückgesetzt).                                                          */
-var lastSi=-1,lastDoneMs=0,lastDoneLen=-1,lastO=-1;
+     zurückgesetzt).
+   * Jede Zuweisung an style/textContent kostet den Browser Arbeit, auch wenn
+     sich der Wert gar nicht geändert hat. Fortschrittsbalken, Ticker und
+     Karten-Deckkraft werden deshalb nur noch geschrieben, wenn sich wirklich
+     etwas bewegt hat — und die Punktliste der gefahrenen Strecke wird erst
+     gebaut, wenn sie auch abgeschickt wird (vorher entstand sie in jedem
+     Bild neu, nur um verworfen zu werden).                                   */
+var lastSi=-1,lastDoneMs=0,lastO=-1,lastP=-1,lastSum='',cardEl=null;
 function render(p){
-  progfill.style.width=(p*100)+'%';
+  if(Math.abs(p-lastP)>0.0004){lastP=p;progfill.style.width=(p*100).toFixed(2)+'%';}
   var fs=p*N,si=clamp(Math.floor(fs),0,N-1),local=fs-si,s=SC[si];
   if(si!==lastSi){
-    if(lastSi>=0){
-      var prev=document.getElementById('card'+lastSi);
-      prev.style.opacity=0;prev.style.transform='translateY(34px)';
+    if(cardEl){
+      cardEl.style.opacity=0;cardEl.style.transform='translateY(34px)';
+      cardEl.classList.remove('live');
     }
-    lastSi=si;lastO=-1;SB.startType(si);
+    lastSi=si;lastO=-1;
+    cardEl=document.getElementById('card'+si);
+    cardEl.classList.add('live');
+    SB.startType(si);
+    // Musik-Meilenstein (falls der Trip einen hat) — nur beim Szenenwechsel.
+    if(SB.music)SB.music.onScene(si);
   }
-  if(SB.music)SB.music.onScene(si);   // Musik-Meilenstein (falls der Trip einen hat)
   var o=local<.05?local/.05:(local>.93?(1-local)/.07:1);
   if(Math.abs(o-lastO)>0.004){
     lastO=o;
-    var el=document.getElementById('card'+si);
-    el.style.opacity=o;el.style.transform='translateY('+((1-o)*34)+'px)';
+    cardEl.style.opacity=o;cardEl.style.transform='translateY('+((1-o)*34)+'px)';
   }
   var sum=0;for(var j=0;j<si;j++)sum+=SC[j].cost;if(local>.5)sum+=s.cost;
-  tv.textContent=SB.fmtEUR(sum);
+  var eur=SB.fmtEUR(sum);
+  if(eur!==lastSum){lastSum=eur;tv.textContent=eur;}
   if(!SB.mapCtl.ready)return;
   var map=SB.mapCtl.map;
   var tt=ease(clamp(local/.7,0,1));
@@ -86,11 +96,11 @@ function render(p){
   // f geht mit: daraus setzt map.js die einzelnen Wagen auf die Strecke.
   SB.mapCtl.setVehicle(pos,route.pointAt(Math.min(f+0.0015,1)),f);
 
-  var t=f*route.LEN,coords=[route.R[0]];
-  for(var k=1;k<route.cum.length;k++){if(route.cum[k]<=t)coords.push(route.R[k]);else break;}
   var now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
-  if(coords.length!==lastDoneLen||now-lastDoneMs>120){
-    lastDoneLen=coords.length;lastDoneMs=now;
+  if(now-lastDoneMs>120){
+    lastDoneMs=now;
+    var t=f*route.LEN,coords=[route.R[0]];
+    for(var k=1;k<route.cum.length;k++){if(route.cum[k]<=t)coords.push(route.R[k]);else break;}
     coords.push(pos);
     map.getSource('done').setData({type:'Feature',geometry:{type:'LineString',coordinates:coords}});
   }

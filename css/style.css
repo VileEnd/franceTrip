@@ -17,7 +17,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
 /* ---- Topbar -------------------------------------------------------------- */
 #topbar{position:fixed;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:12px;
   padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
-  background:rgba(236,0,22,.92);backdrop-filter:blur(10px);color:#fff}
+  background:rgba(236,0,22,.92);color:#fff}
+/* Kein backdrop-filter: bei 92 % Deckkraft sieht man vom Blur ohnehin nichts —
+   der Browser hätte aber bei JEDEM Bild der Kartenfahrt den Streifen darunter
+   neu weichgezeichnet. Auf Phones war er schon länger aus. */
 .logo{background:#fff;color:var(--rot);font-weight:900;font-style:italic;font-size:1.15rem;padding:1px 10px;border-radius:4px;
   cursor:pointer;user-select:none}
 #topbar .cl{font-size:.72rem;opacity:.95;flex:1}
@@ -43,6 +46,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
 @keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
 .floaty{position:absolute;font-size:1.6rem;opacity:.5;animation:drift linear infinite;pointer-events:none}
+/* Endlos-Animationen laufen auch weiter, wenn niemand hinschaut — der
+   Compositor tickt sie trotzdem in jedem Bild. js/ui.js setzt .ruht, sobald
+   Hero bzw. RSVP aus dem Bild sind (also während der ganzen Kartenfahrt). */
+.ruht .floaty{animation-play-state:paused}
 @keyframes drift{0%{transform:translateY(8vh) rotate(-8deg)}100%{transform:translateY(-110vh) rotate(14deg)}}
 
 /* ---- Scrolly / Karte ------------------------------------------------------ */
@@ -73,7 +80,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
    Handschrift (Caveat) in Füller-Tinte, mit Klebestreifen oben drauf.          */
 .scard{position:absolute;left:24px;bottom:56px;max-width:560px;z-index:7;
   background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-radius:22px;padding:26px 28px;
-  box-shadow:0 24px 70px rgba(0,0,0,.32);opacity:0;transform:translateY(34px);pointer-events:none;will-change:opacity,transform}
+  box-shadow:0 24px 70px rgba(0,0,0,.32);opacity:0;transform:translateY(34px);pointer-events:none;
+  visibility:hidden}
+/* Sichtbar ist immer nur EINE Karte (js/story.js setzt .live beim Szenen-
+   wechsel). Die anderen neun bleiben visibility:hidden — sonst hält der
+   Browser für jede eine eigene Compositing-Ebene mit Blur vor, obwohl sie
+   auf Deckkraft 0 steht. will-change gilt aus demselben Grund nur für die
+   Karte, die sich gerade wirklich bewegt. */
+.scard.live{visibility:visible;will-change:opacity,transform}
 .scard::before{content:'';position:absolute;top:-12px;left:50%;width:96px;height:24px;
   transform:translateX(-50%) rotate(-3deg);background:rgba(255,216,0,.45);
   border-left:1px dashed rgba(0,0,0,.08);border-right:1px dashed rgba(0,0,0,.08);border-radius:2px}
