@@ -178,6 +178,49 @@ footer b{color:#fff}
 .tee .teetxt{font-family:Georgia,'Times New Roman',serif;fill:var(--ink);font-weight:600;font-size:21px}
 .teecap{margin-top:16px;font-size:.82rem;color:var(--grau);font-weight:600}
 
+/* ---- Zuckerdose (marschiert vor dem RSVP über den Tisch) --------------------
+   Look: altes Zeichentrick-Cel. Gemalter, stillstehender Hintergrund, darüber
+   flach kolorierte Figuren mit Tuschekontur, einer Schattenfläche und einem
+   Glanzlicht — plus Vignette und Filmkorn. Bewegt wird per transform-Attribut
+   in js/zucker.js, mit 12 Zeichnungen pro Sekunde („auf Zweien").            */
+.zuckerblock{background:linear-gradient(180deg,#fff 0%,#F4F1EE 100%);overflow:hidden}
+#zuckerbuehne{max-width:760px;margin:0 auto;cursor:pointer;user-select:none;-webkit-user-select:none}
+#zuckersvg{width:100%;height:auto;display:block;border-radius:10px;
+  box-shadow:0 22px 50px rgba(27,31,38,.34),0 0 0 1px rgba(27,31,38,.25)}
+
+/* Gemalte Kulisse */
+.zk-wand{fill:url(#zkWand)}
+.zk-schrank{fill:#332F23;opacity:.75}
+.zk-schrankhell{fill:#6A6047;opacity:.5}
+.zk-fuge{fill:none;stroke:#241F16;stroke-width:2.5;opacity:.55;stroke-linecap:round}
+.zk-pinsel{fill:none;stroke:#8E8261;stroke-width:5;opacity:.18;stroke-linecap:round}
+.zk-pinsel.hell{stroke:#fff;opacity:.22;stroke-width:4}
+.zk-platte{fill:url(#zkPlatte)}
+.zk-plattenlicht{fill:none;stroke:#FFFCF3;stroke-width:3;opacity:.5}
+.zk-vignette{fill:url(#zkVignette);pointer-events:none}
+.zk-korn{opacity:.11;mix-blend-mode:overlay;pointer-events:none}
+
+/* Cel-Figuren: Tuschelinie, flache Farbe, eine Schattenfläche, ein Glanz */
+.zk-schlagschatten{fill:rgba(42,36,22,.34)}   /* Deckkraft steuert JS über das opacity-Attribut */
+.zk-keramik{fill:#8CD2E6;stroke:#20344F;stroke-width:2.8;stroke-linejoin:round;stroke-linecap:round}
+.zk-ton{fill:#5FAECA;opacity:.85}
+.zk-glanzflaeche{fill:#D9F2FA;opacity:.8}
+.zk-innen{fill:#2E6B8C;stroke:#20344F;stroke-width:2.8}
+.zk-ring{fill:none;stroke:#5FAECA;stroke-width:2.2}
+.zk-randlinie{fill:none;stroke:#20344F;stroke-width:2.8}
+.zk-henkel-um{fill:none;stroke:#20344F;stroke-width:12.5;stroke-linecap:round}
+.zk-henkel{fill:none;stroke:#8CD2E6;stroke-width:7;stroke-linecap:round}
+.zk-stiel{fill:none;stroke:#3E3F8C;stroke-width:5.5;stroke-linecap:round}
+.zk-loeffelkopf{fill:#4B4CA8;stroke:#23234F;stroke-width:2.4}
+.zk-loeffelglanz{fill:none;stroke:#9A9BD8;stroke-width:2;stroke-linecap:round;opacity:.9}
+.zk-fuellung{fill:#FDFBF2;stroke:#20344F;stroke-width:2;stroke-linejoin:round}
+.zk-flaeche{fill:#FFFEF8;stroke:#20344F;stroke-width:2}
+.zk-zuckerton{fill:#DDDCCB;opacity:.9}
+.zk-korn-zucker{fill:#FDFBF2;stroke:#20344F;stroke-width:1.4}
+.zk-krumel{fill:none;stroke:#C9C7B4;stroke-width:1.5}
+.zk-funke{fill:#FFF3B0}
+.zk-cap{margin-top:12px;text-align:center;font-family:'Caveat',cursive;color:var(--tinte);font-size:1.5rem;line-height:1.2;min-height:1.3em}
+
 /* ---- Mobile ------------------------------------------------------------------
    backdrop-filter:blur() über einer bewegten Karte ist DIE Ruckel-Ursache auf
    Smartphones – hier bekommt jede geblurrte Fläche eine (fast) deckende Füllung. */
@@ -211,6 +254,9 @@ footer b{color:#fff}
   #rsvp{padding:72px 18px 96px}
   .btnrow{width:100%}
   button.rot{width:100%;max-width:340px;padding:16px 24px}
+  #zuckersvg{border-radius:8px}
+  .zk-korn{display:none}      /* Filmkorn ist auf kleinen Displays nur Rechenlast */
+  .zk-cap{font-size:1.25rem;margin-top:9px}
 }
 
 /* ---- Reduced Motion ---------------------------------------------------------- */

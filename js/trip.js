@@ -61,6 +61,20 @@ SB.trip={
     caption:'Die Kanne besteht darauf, mitzukommen.'
   },
 
+  /* Zuckerdosen-Szene direkt vor dem RSVP: die Dose marschiert von links nach
+     rechts zur Tasse und füllt sie Runde für Runde. captions = eine Zeile je
+     Runde, die letzte gehört zum übervollen Finale (also immer eine mehr als
+     Füll-Runden). zucker:null schaltet die Szene ab. */
+  zucker:{
+    title:'Zum Schluss: der Zucker.',
+    sub:'Frühstück ist Chefsache — und die Zuckerdose erledigt das allein. Sie marschiert von links nach rechts und füllt deine Tasse. Löffel für Löffel, bis nichts mehr reinpasst.',
+    captions:['Erster Löffel. Zum Aufwärmen.',
+              'Zweiter Gang. Sie meint es ernst.',
+              'Langsam wird\'s süß.',
+              'Noch einer — es sind ja Ferien.',
+              'Voll. Fehlt nur noch dein Ja.']
+  },
+
   /* Route als [Lng,Lat]-Punkte, Hin- und Rückweg. stopIdx = Indizes der
      Punkte, die als Halte-Kreise auf der Karte markiert werden. */
   route:{

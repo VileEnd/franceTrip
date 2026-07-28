@@ -32,11 +32,12 @@ Fertig. Alles andere (`js/core|mesh|ui|map|music|story|tee3d.js`,
 | `js/story.js`  | Scroll-Steuerung: geglätteter Render-Loop + Autopilot |
 | `js/tee3d.js`  | Macht aus dem T-Shirt-Abschnitt ein drehendes 3D-Modell (SVG bleibt Rückfallebene) |
 | `js/teapot.js` | Marschierende Teekanne (Ladeanzeige der Karte & Seitenende) |
+| `js/zucker.js` | Zuckerdosen-Szene vor dem RSVP: marschiert, kippt, füllt die Tasse |
 | `css/style.css`| Alle Styles (DB-rotes Design, generische Klassen) |
 | `index.html`   | Generische Hülle mit leeren Containern |
 
 Ladereihenfolge (in `index.html`):
-`core → trip → mesh → ui → map → music → story → tee3d → teapot`.
+`core → trip → mesh → ui → map → music → story → tee3d → teapot → zucker`.
 Klassische `<script>`-Tags mit gemeinsamem `SB`-Namespace — läuft direkt von
 Platte (`file://`) und auf GitHub Pages, kein Build-Schritt.
 
@@ -93,6 +94,13 @@ SB.trip = {
     caption:'…',                       // Zeile unter der Kanne am Seitenende
     where:['loading','end'],           // wo sie auftaucht
     speed:0.34, step:2.1               // Lauftempo & Schrittfrequenz
+  },
+
+  zucker: {                            // ODER null → keine Zuckerdose
+    title:'…', sub:'…',                // Überschrift & Vorspann des Abschnitts
+    captions:['…','…','…','…','…'],    // eine Zeile je Füll-Runde + Finale
+    bg:'hell',                         // optional: grauer Abschnitt
+    ariaLabel:'…', replayTitle:'…'     // Vorlesetext & Tooltip zum Neustart
   },
 
   music: {                             // ODER null → Trip ohne Musik
@@ -255,6 +263,22 @@ durchs Bild stapft: Beine im Wechsel, Körper im Takt wippend, Deckel
 hüpfend, Löffel hinterherwackelnd. Sie läuft während die Karte lädt und
 noch einmal am Seitenende. Gezeichnet wird nur, solange sie sichtbar ist —
 und bei `prefers-reduced-motion` bleibt sie stehen.
+
+### Die Zuckerdose
+
+`js/zucker.js` hängt ganz ans Ende von `#content` — also direkt vor das
+RSVP — eine gezeichnete Szene: eine Zuckerdose marschiert von links nach
+rechts zur Teetasse, klappt den Deckel auf, kippt und schüttet Zucker nach.
+Vier Runden lang, die Tasse wird jedes Mal voller, zum Schluss quillt sie
+über. Unter der Bühne steht je Runde eine Zeile aus `captions`, ein Tipp auf
+die Szene startet sie neu.
+
+Gezeichnet ist alles als Trickfilm-Cel: gemalter, stillstehender
+Hintergrund, darüber flache Farbflächen mit Tuschekontur, dazu Vignette und
+Filmkorn. Bewegt wird mit 12 Zeichnungen je Sekunde („auf Zweien"), nicht
+mit CSS-Keyframes — `zustand(t)` beschreibt die Szene für jeden Zeitpunkt.
+Deshalb sind Standbild bei `prefers-reduced-motion`, Neustart per Klick und
+das Pausieren außerhalb des Bildschirms derselbe Codepfad.
 
 ### Tipps fürs Routen-Bauen
 
