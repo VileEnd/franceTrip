@@ -56,12 +56,15 @@
 <footer id="footer"></footer>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<!-- Reihenfolge wichtig: core (Engine-Kern) → trip (Daten) → ui → map → music → story -->
+<!-- Reihenfolge wichtig: core (Engine-Kern) → trip (Daten) → mesh (3D-Basis)
+     → ui → map → music → story → tee3d (braucht das gerenderte DOM) -->
 <script src="js/core.js"></script>
 <script src="js/trip.js"></script>
+<script src="js/mesh.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/map.js"></script>
 <script src="js/music.js"></script>
 <script src="js/story.js"></script>
+<script src="js/tee3d.js"></script>
 </body>
 </html>

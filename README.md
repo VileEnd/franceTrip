@@ -16,8 +16,8 @@ Der Rest ist wiederverwendbare Engine, die man nicht anfassen muss.
    für Link-Vorschauen (Messenger/Suchmaschinen führen kein JavaScript aus,
    deshalb stehen diese doppelt).
 
-Fertig. Alles andere (`js/core|ui|map|music|story.js`, `css/style.css`,
-Rest von `index.html`) ist generisch.
+Fertig. Alles andere (`js/core|mesh|ui|map|music|story|tee3d.js`,
+`css/style.css`, Rest von `index.html`) ist generisch.
 
 ## Dateien
 
@@ -25,14 +25,17 @@ Rest von `index.html`) ist generisch.
 |----------------|-------|
 | `js/trip.js`   | ⭐ **Die Reise.** Nur diese Datei pro Trip anpassen. |
 | `js/core.js`   | Engine-Kern: Geräte-Erkennung, Routen-Mathematik, Daten-Vorbereitung |
+| `js/mesh.js`   | 3D-Werkzeugkasten: Grundkörper, Modelle & Shader (Fahrzeug **und** T-Shirt) |
 | `js/ui.js`     | Rendert alles aus den Trip-Daten: Hero, Karten, Inhaltsblöcke, RSVP, Footer |
 | `js/map.js`    | MapLibre-Karte: Route, Halte, Zug-Icon, 3D-Gelände |
 | `js/music.js`  | Musik am Meilenstein inkl. Dialog — überspringt sich selbst, wenn der Trip keine Musik hat |
 | `js/story.js`  | Scroll-Steuerung: geglätteter Render-Loop + Autopilot |
+| `js/tee3d.js`  | Macht aus dem T-Shirt-Abschnitt ein drehendes 3D-Modell (SVG bleibt Rückfallebene) |
 | `css/style.css`| Alle Styles (DB-rotes Design, generische Klassen) |
 | `index.html`   | Generische Hülle mit leeren Containern |
 
-Ladereihenfolge (in `index.html`): `core → trip → ui → map → music → story`.
+Ladereihenfolge (in `index.html`):
+`core → trip → mesh → ui → map → music → story → tee3d`.
 Klassische `<script>`-Tags mit gemeinsamem `SB`-Namespace — läuft direkt von
 Platte (`file://`) und auf GitHub Pages, kein Build-Schritt.
 
@@ -107,7 +110,9 @@ SB.trip = {
     { type:'cards', title, sub, items:[{tag, title, html, price}, …] },
     { type:'tee',   bg:'hell', title, sub, emoji:'🥐', tag:'UT',
       motto1:'Zeile 1', motto2:'Zeile 2',   // kurz halten, ~18 Zeichen/Zeile
-      ariaLabel:'…', caption:'…' },
+      ariaLabel:'…', caption:'…',
+      cloth:'#F4F2EE', trim:'#DAD6CE', printColor:'#1B1F26',
+      d3:false },                           // d3:false = flaches SVG statt 3D
     { type:'html',  title, sub, html:'<p>freier Block</p>' }
   ],
 
@@ -165,6 +170,15 @@ bleibt — ein WebGL-Layer kennt keine anklickbaren Objekte. In der
 Emoji-Rückfallebene wird stattdessen das Symbol getauscht (`tapEmoji`).
 `tapModel:null` schaltet den Gag ab.
 
+### Das 3D-T-Shirt
+
+Der Abschnitt `type:'tee'` wird von `js/tee3d.js` zu einem langsam drehenden
+3D-Modell aufgerüstet. Der Brustdruck (Emoji + Motto) wird in ein Canvas
+gezeichnet und als Textur aufgelegt — der Text bleibt dadurch scharf und
+steht weiterhin in `js/trip.js`. Gezeichnet wird nur, solange das Shirt im
+Bild ist; bei `prefers-reduced-motion` steht es still. Ohne WebGL bleibt die
+gezeichnete SVG-Variante stehen, `d3:false` erzwingt sie.
+
 ### Tipps fürs Routen-Bauen
 
 - Koordinaten sind `[Längengrad, Breitengrad]` (Lng zuerst — wie GeoJSON).
@@ -174,6 +188,35 @@ Emoji-Rückfallebene wird stattdessen das Symbol getauscht (`tapEmoji`).
   sie selbst in Streckenanteile um.
 - Kamera: `z` 7–9 für Überblick, 11–12.5 für Städte; `p` (Pitch) 45–56 wirkt
   filmisch; `b` (Bearing) langsam drehen lassen (±30–60 zwischen Szenen).
+
+## Veröffentlichen: GitHub Pages mit Branch-Vorschauen
+
+`.github/workflows/pages.yml` veröffentlicht bei **jedem** Push. Da Pages pro
+Repository nur eine Seite ausliefert, baut `.github/build-site.sh` die Seite
+jedes Mal komplett neu zusammen:
+
+| URL | Inhalt |
+|-----|--------|
+| `/` | Stand von `main` |
+| `/previews/<branch>/` | Stand jedes anderen Branches |
+| `/previews/` | Übersicht mit Links zu allen Vorschauen |
+
+Gelöschte Branches verschwinden beim nächsten Deploy von selbst, weil bei
+jedem Lauf alle Branches frisch eingelesen werden. Lokal ausprobieren:
+
+```sh
+DEFAULT_BRANCH=main bash .github/build-site.sh   # baut ./_site
+```
+
+Zwei Einstellungen im Repository, falls der erste Lauf hakt:
+
+1. **Settings → Pages → Source** muss auf *GitHub Actions* stehen. Der
+   Workflow stellt das über `actions/configure-pages` mit `enablement: true`
+   selbst um; schlägt das an fehlenden Rechten fehl, einmal von Hand setzen.
+2. **Settings → Environments → `github-pages` → Deployment branches**: für
+   Vorschauen aus Feature-Branches muss *All branches* erlaubt sein. Steht
+   dort nur der Standard-Branch, bricht der Deploy-Schritt auf anderen
+   Branches mit „Branch is not allowed to deploy“ ab.
 
 ## Technische Notizen
 

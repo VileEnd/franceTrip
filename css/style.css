@@ -161,6 +161,7 @@ footer b{color:#fff}
 /* ---- Reise-Trikot (Croissant du matin, tout va bien!) ----------------------- */
 .teewrap{max-width:340px;margin:8px auto 0;text-align:center}
 .tee{width:100%;height:auto;display:block;filter:drop-shadow(0 20px 44px rgba(27,31,38,.18))}
+.tee3d{width:100%;height:380px;display:block;filter:drop-shadow(0 18px 40px rgba(27,31,38,.20))}
 .tee .shirt{fill:#fff;stroke:#E1E5E9;stroke-width:2}
 .tee .collar{fill:none;stroke:#E1E5E9;stroke-width:3}
 .tee .tag{fill:#AEB4BB;font:800 10px Inter,sans-serif;letter-spacing:.5px}

@@ -1,0 +1,57 @@
+# Veröffentlicht die Seite auf GitHub Pages — inklusive Vorschau je Branch.
+#
+# GitHub Pages liefert pro Repository nur EINE Seite aus. Deshalb baut
+# dieser Workflow bei jedem Push die komplette Seite neu zusammen:
+#
+#   /                       → Stand von main
+#   /previews/<branch>/     → Stand jedes anderen Branches
+#   /previews/              → Übersicht mit Links
+#
+# Weil bei jedem Lauf alle Branches frisch eingelesen werden, verschwinden
+# gelöschte Branches beim nächsten Deploy von selbst.
+name: Pages
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Immer nur ein Deploy gleichzeitig; laufende dürfen fertig werden.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # alle Branches, nicht nur der gepushte
+
+      - name: Seite zusammenbauen
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: bash .github/build-site.sh
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true      # stellt die Pages-Quelle einmalig auf "Actions"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
