@@ -47,7 +47,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink);font-weight:800;letter-spacing:.15em;text-transform:uppercase;font-size:.8rem;background:#EFEDE8;z-index:5;transition:opacity .6s}
 #loading.aus{opacity:0;pointer-events:none}
 /* Unsichtbare Trefferfläche über dem Fahrzeug (fährt im Kartenmittelpunkt) */
-#vehiclehit{position:absolute;left:50%;top:50%;width:118px;height:118px;margin:-59px 0 0 -59px;
+/* Trefferfläche fürs Antippen. Der Zug fährt mit dem Kopf im Kartenmittel-
+   punkt und zieht sich nach hinten — in welche Bildschirmrichtung, hängt
+   vom Kurs ab. Deshalb ein Kreis um die Mitte, groß genug für die ersten
+   Wagen, aber klein genug, dass die Story-Karte anklickbar bleibt.        */
+#vehiclehit{position:absolute;left:50%;top:50%;width:172px;height:172px;margin:-86px 0 0 -86px;
   padding:0;border:0;background:transparent;border-radius:50%;cursor:pointer;z-index:7}
 #vehiclehit:focus-visible{outline:3px solid #fff;outline-offset:-6px;background:rgba(255,255,255,.14)}
 #prog{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(27,31,38,.15);z-index:6}

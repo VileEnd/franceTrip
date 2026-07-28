@@ -40,6 +40,11 @@ function sez(a,p){var s=Math.sin(a);return sgn(s)*Math.pow(Math.abs(s),2/p);}
 var DET=1;
 function seg(n){return Math.max(4,Math.round(n*DET));}
 
+/* Beschriftungsstreifen: ein Bild, zwei Felder nebeneinander. Wer die
+   Textur zeichnet (js/map.js), muss sich an dieselbe Aufteilung halten —
+   die Zahlen sind die x-Anteile im Bild.                                  */
+var BRAND={word:[0,0.62],logo:[0.66,1]};
+
 /* ---- Parametrische Fläche ------------------------------------------------
    P(u,v) liefert einen Punkt, die Normale kommt aus den Ableitungen —
    deshalb sind alle Rundungen weich schattiert. col(u,v,pos,n) färbt jeden
@@ -168,18 +173,31 @@ function croissant(out,crust,toast){
    Bodenkante und halbe Breite kommen aus je einer Stützstellen-Kurve über
    den Abstand zum nächsten Ende. Vorn wie hinten sitzt also ein Kopf, so
    wie bei einem echten Triebzug.
-   Alles Aufgesetzte — Fensterband, Scheiben, Streifen, Schürze, Lichter —
-   liegt als hauchdünn nach außen versetzte Fläche auf der Hülle und folgt
-   damit von selbst jeder Rundung. Überlappen darf sich davon nichts:
-   zwei Flächen auf gleicher Höhe würden gegeneinander flimmern.           */
-function ice(out,C){
+   Alles Aufgesetzte — Fensterband, Scheiben, Streifen, Schürze, Lichter,
+   Beschriftung — liegt als hauchdünn nach außen versetzte Fläche auf der
+   Hülle und folgt damit von selbst jeder Rundung. Überlappen darf sich auf
+   derselben Versatzstufe nichts: zwei Flächen auf gleicher Höhe würden
+   gegeneinander flimmern. Deshalb drei Stufen: Bänder (OFF), Stege und
+   Lichter darüber (OFF2), Beschriftung zuoberst (OFF3).
+
+   opt.front / opt.rear: sitzt an diesem Ende eine Nase (Kopfwagen) oder ein
+   flacher Kupplungskopf (Mittelwagen)? opt.brand zeichnet die Beschriftung.  */
+function ice(out,C,opt){
+  opt=opt||{};
+  var noseF=opt.front!==false,noseR=opt.rear!==false;
   var shell=hexRGB(C.light,'#F4F2EE'),stripe=hexRGB(C.color,'#EC0016'),
       glass=hexRGB(C.glass,'#26313E'),accent=hexRGB(C.accent,'#FFD800'),
       roofc=[0.74,0.75,0.76],trim=[0.87,0.86,0.84],
       dark=[0.17,0.18,0.20],deep=[0.09,0.09,0.10],metal=[0.62,0.63,0.65];
   var PT=3.7,PB=5.2;                     // Dachrundung / Bodenrundung
-  var OFF=0.0020,OFF2=0.0033;            // Versatz der aufgesetzten Flächen
-  /* s = Abstand zum nächsten Ende (0 = Nasenspitze, 0.5 = Wagenmitte). */
+  var OFF=0.0020,OFF2=0.0033,OFF3=0.0046;
+  /* Enden: an einer Nase rücken die Bänder ein Stück ein, an einem flachen
+     Kupplungskopf laufen sie bis an die Stirnfläche.                       */
+  var uA=noseR?0.030:0,uB=noseF?0.970:1,
+      bA=noseR?0.055:0.032,bB=noseF?0.945:0.968;
+  /* s = Abstand zum nächsten Ende (0 = Nasenspitze, 0.5 = Wagenmitte).
+     Ein flaches Ende liefert konstant 0.5 — dort bleibt der Querschnitt
+     also über die ganze Länge voll ausgebildet.                           */
   var TOP=[[0,0.112],[0.012,0.140],[0.030,0.188],[0.055,0.236],[0.086,0.270],
            [0.125,0.291],[0.190,0.301],[0.5,0.303]],
       BOT=[[0,0.098],[0.016,0.084],[0.045,0.078],[0.100,0.075],[0.5,0.074]],
@@ -190,7 +208,7 @@ function ice(out,C){
   var _pk=[NaN,NaN,NaN,NaN],_pv=[],_pi=0;
   function prof(u){
     for(var i=0;i<4;i++)if(_pk[i]===u)return _pv[i];
-    var s=Math.min(u,1-u),zt=curve(TOP,s),zb=curve(BOT,s);
+    var s=Math.min(noseF?1-u:0.5,noseR?u:0.5),zt=curve(TOP,s),zb=curve(BOT,s);
     _pi=(_pi+1)&3;_pk[_pi]=u;
     return _pv[_pi]={x:-0.5+u,s:s,hy:curve(WID,s),hz:(zt-zb)/2,zc:(zt+zb)/2};
   }
@@ -228,6 +246,18 @@ function ice(out,C){
     if(side<0){a0=Math.PI-a0;a1=Math.PI-a1;}
     arc(u0,u1,a0,a1,col,nu||6,nv||5,e);
   }
+  /* Beschriftung: dasselbe Feld, aber mit Texturkoordinaten. tx0/tx1 wählen
+     den Ausschnitt im Beschriftungsstreifen (siehe BRAND). Auf der linken
+     Flanke läuft der Ausschnitt rückwärts, sonst stünde die Schrift dort
+     spiegelverkehrt.                                                       */
+  function decal(u0,u1,h0,h1,side,tx){
+    var a0=ang(h0),a1=ang(h1);
+    if(side<0){a0=Math.PI-a0;a1=Math.PI-a1;}
+    surface(out,function(u,v){return push(mix(u0,u1,u),mix(a0,a1,v),OFF3);},
+      seg(7),seg(5),function(){return shell;},
+      function(u,v){return [mix(tx[0],tx[1],side>0?1-u:u),v];},
+      {openV:true,flip:(u1-u0)*(a1-a0)<0});
+  }
 
   /* ---- Wagenkasten ---- */
   surface(out,function(u,v){return Pa(u,v*Math.PI*2);},seg(68),seg(28),
@@ -235,15 +265,37 @@ function ice(out,C){
       var pr=prof(u),h=(p[2]-pr.zc)/pr.hz;
       return h<-0.78?dark:(h>0.90?roofc:shell);   // Dachhaut leicht grau
     });
-  [0,1].forEach(function(e){                      // Nasenspitzen schließen
-    ring(out,function(v){return Pa(e,v*Math.PI*2);},
-      function(){var pr=prof(e);return [pr.x+(e?0.009:-0.009),0,pr.zc];},
-      2,seg(20),function(){return shell;},{flip:!e});
+  /* Enden schließen: eine Nase bekommt eine kleine Kuppe, ein Kupplungskopf
+     eine eingezogene Stirnfläche — die liest sich als Übergang zum Nachbarn. */
+  [0,1].forEach(function(e){
+    var nose=e?noseF:noseR,pr=prof(e),dx=(e?1:-1)*(nose?0.009:-0.014);
+    if(nose){
+      ring(out,function(v){return Pa(e,v*Math.PI*2);},
+        function(){return [pr.x+dx,0,pr.zc];},
+        2,seg(20),function(){return shell;},{flip:!e});
+      return;
+    }
+    function lip(v){var p=Pa(e,v*Math.PI*2);
+      return [p[0]+dx,p[1]*0.86,mix(pr.zc,p[2],0.86)];}
+    ring(out,function(v){return Pa(e,v*Math.PI*2);},lip,
+      2,seg(20),function(){return dark;},{flip:!e});
+    ring(out,lip,function(){return [pr.x+dx,0,pr.zc];},
+      2,seg(20),function(){return deep;},{flip:!e});
   });
 
-  /* ---- Schürze und Zierstreifen ---- */
-  arc(0.035,0.965,ang(-0.82),-Math.PI-ang(-0.82),dark,44,5);
-  [1,-1].forEach(function(side){pane(0.035,0.965,-0.66,-0.42,side,stripe,48,4);});
+  /* ---- Schürze und Zierstreifen --------------------------------------
+     Der rote Streifen sitzt dicht unter dem Fensterband und taucht zu den
+     Köpfen hin ab: dort läuft er unter der Bugscheibe um die Nase herum. */
+  arc(uA,uB,ang(-0.82),-Math.PI-ang(-0.82),dark,44,5);
+  function sLo(s){return mix(-0.46,-0.16,smooth((s-0.012)/0.085));}
+  function sHi(s){return mix(-0.22,0.06,smooth((s-0.012)/0.085));}
+  [1,-1].forEach(function(side){
+    surface(out,function(u,v){
+      var uu=mix(uA,uB,u),s=Math.min(noseF?1-uu:0.5,noseR?uu:0.5),
+          a=mix(ang(sLo(s)),ang(sHi(s)),v);
+      return push(uu,side>0?a:(Math.PI-a),OFF);
+    },seg(56),seg(4),function(){return stripe;},null,{openV:true,flip:side<0});
+  });
 
   /* ---- Fensterband ---------------------------------------------------
      Zur Kabine hin zieht die Unterkante nach unten und trifft dort auf
@@ -251,7 +303,7 @@ function ice(out,C){
      Seitenfenster des Triebkopfs.                                        */
   [1,-1].forEach(function(side){
     surface(out,function(u,v){
-      var uu=mix(0.055,0.945,u),s=Math.min(uu,1-uu),
+      var uu=mix(bA,bB,u),s=Math.min(noseF?1-uu:0.5,noseR?uu:0.5),
           lo=mix(0.10,0.24,smooth((s-0.055)/0.070)),
           a=mix(ang(lo),ang(0.72),v);
       return push(uu,side>0?a:(Math.PI-a),OFF);
@@ -259,10 +311,11 @@ function ice(out,C){
   });
   /* Stege zwischen den Scheiben und Türen — dadurch zerfällt das Band in
      einzelne Fenster, statt als schwarzer Balken durchzulaufen.          */
-  var EDGES=[0.078,0.22,0.50,0.78,0.922];
+  var DOORS=[0.18,0.5,0.82].map(function(t){return mix(bA,bB,t);});
+  var EDGES=[bA+0.020].concat(DOORS).concat([bB-0.020]);
   [1,-1].forEach(function(side){
-    [0.22,0.50,0.78].forEach(function(u){      // Türen: Steg bis unters Band
-      pane(u-0.007,u+0.007,-0.42,0.74,side,trim,4,7,OFF2);
+    DOORS.forEach(function(u){                 // Türen: Steg bis unters Band
+      pane(u-0.007,u+0.007,-0.14,0.74,side,trim,4,7,OFF2);
     });
     for(var i=0;i<EDGES.length-1;i++){
       var a=EDGES[i],b=EDGES[i+1],n=Math.max(2,Math.round((b-a)/0.058));
@@ -273,7 +326,7 @@ function ice(out,C){
     }
   });
 
-  /* ---- Köpfe: Bugscheibe, roter Bug, Spitzenlichter ------------------
+  /* ---- Köpfe: Bugscheibe, roter Bug, Spitzenlichter, Beschriftung ----
      Die Bugscheibe läuft von Wange zu Wange über das Dach. Ihre Unterkante
      steigt nach hinten an und geht genau dort ins Fensterband über.      */
   function head(e){
@@ -282,13 +335,17 @@ function ice(out,C){
       var lo=mix(-0.34,0.10,smooth(u)),a=mix(ang(lo),Math.PI-ang(lo),v);
       return push(U(mix(0.006,0.055,u)),a,OFF);
     },seg(10),seg(26),function(){return glass;},null,{openV:true,flip:e>0});
-    arc(U(0.000),U(0.035),ang(-0.44),-Math.PI-ang(-0.44),stripe,6,14);
+    arc(U(0.000),U(0.030),ang(sHi(0.030)),-Math.PI-ang(sHi(0.030)),stripe,6,14);
     [1,-1].forEach(function(side){
-      pane(U(0.048),U(0.020),-0.38,-0.10,side,
+      pane(U(0.050),U(0.022),-0.34,-0.12,side,
         function(u,v){return v<0.62?accent:stripe;},4,6,OFF2);
+      if(!opt.brand)return;
+      decal(U(0.085),U(0.055),-0.70,-0.44,side,BRAND.logo);
+      decal(U(0.175),U(0.095),-0.70,-0.36,side,BRAND.word);
     });
   }
-  head(1);head(-1);
+  if(noseF)head(1);
+  if(noseR)head(-1);
 
   /* ---- Untergestell, Drehgestelle, Räder ---- */
   function wheel(x,y0,r,w){
@@ -311,9 +368,12 @@ function ice(out,C){
     });
   });
 
-  /* ---- Dach: Aufbauten und einarmiger Stromabnehmer ---- */
+  /* ---- Dach: Aufbauten und einarmiger Stromabnehmer -------------------
+     Wie beim Vorbild trägt nur der Mittelwagen einen Stromabnehmer — die
+     Triebköpfe bleiben oben glatt.                                       */
   box(out,-0.360,-0.270,-0.056,0.056,0.292,0.307,roofc);
   box(out, 0.270, 0.360,-0.056,0.056,0.292,0.307,roofc);
+  if(!opt.panto)return;
   box(out,-0.150, 0.030,-0.054,0.054,0.292,0.306,dark);            // Wanne
   [-0.126,0.008].forEach(function(x){[1,-1].forEach(function(s){
     ball(out,x,s*0.038,0.316,0.012,0.012,0.014,metal,8);           // Isolatoren
@@ -327,6 +387,50 @@ function ice(out,C){
   box(out,-0.094,-0.062, 0.062, 0.074,0.374,0.388,dark);
 }
 
+/* ---- Gleis ---------------------------------------------------------------
+   Ein Stück Schotterbett mit Schwellen und zwei Schienen, genau eine
+   Wagenteilung lang. Die Karte setzt unter jeden Wagen eines — dadurch
+   folgt das Gleis der Route und liegt auch in Kurven unter dem Zug.
+   Schienenoberkante bei z=0.004, der Rest liegt darunter im Boden.       */
+function iceTrack(out,C,len){
+  var rail=hexRGB(C.rail,'#9AA0A6'),tie=hexRGB(C.tie,'#544941'),
+      bed=hexRGB(C.ballast,'#918B82');
+  var L=len/2;
+  box(out,-L,L,-0.146,0.146,-0.020,-0.014,bed);
+  for(var x=-L+0.032;x<L-0.01;x+=0.070)
+    box(out,x-0.017,x+0.017,-0.126,0.126,-0.014,-0.006,tie);
+  [1,-1].forEach(function(s){
+    box(out,-L,L,s*0.100-0.011,s*0.100+0.011,-0.007,0.004,rail);
+  });
+}
+
+/* ---- Ganzer Triebzug -----------------------------------------------------
+   Liefert die Bauteile, aus denen die Karte den Zug zusammensetzt:
+   Kopfwagen (Nase vorn, Kupplungskopf hinten), Mittelwagen und ein
+   Gleisstück. Der Schlusswagen ist derselbe Kopfwagen, um 180° gedreht —
+   deshalb braucht es dafür kein eigenes Netz.
+   Gesetzt wird jeder Wagen einzeln auf die Route (siehe js/map.js), damit
+   der Zug in Kurven mitläuft statt sie starr abzuschneiden.              */
+function iceTrain(C){
+  C=C||{};
+  DET=C.detail||1;
+  var head=[],mid=[];
+  ice(head,C,{rear:false,brand:true});
+  ice(mid,C,{front:false,rear:false,panto:true});
+  DET=1;
+  return {head:new Float32Array(head),mid:new Float32Array(mid)};
+}
+/* Ein Gleisstück für sich — die Karte legt es unter jeden Wagen, egal
+   welches Modell gerade oben drauf fährt.                                */
+function trackPiece(C,len){
+  C=C||{};
+  var v=[];
+  DET=C.detail||1;
+  iceTrack(v,C,len||1.06);
+  DET=1;
+  return new Float32Array(v);
+}
+
 /* ---- Fahrzeuge ----------------------------------------------------------
    Modellraum: +x = Fahrtrichtung, +z = oben, Gesamtlänge 1.               */
 function vehicle(kind,C){
@@ -336,7 +440,8 @@ function vehicle(kind,C){
       glass=hexRGB(C.glass,'#26313E'),light=hexRGB(C.light,'#F2F0EA'),
       dark=[0.16,0.17,0.19],v=[];
   if(kind==='croissant')croissant(v,hexRGB(C.crust,'#F2B863'),hexRGB(C.toast,'#C07C34'));
-  else if(kind==='ice')ice(v,C);
+  // Einzelfahrzeug: Nase an beiden Enden, mit Stromabnehmer und Beschriftung.
+  else if(kind==='ice')ice(v,C,{panto:true,brand:true});
   else if(kind==='bus'){
     box(v,-0.46,0.46,-0.155,0.155,0.00,0.075,dark);
     box(v,-0.50,0.50,-0.175,0.175,0.06,0.42,body);
@@ -579,6 +684,7 @@ function chainPivot(base,pivot,rot){
 
 SB.mesh={hexRGB:hexRGB,surface:surface,revolve:revolve,sweep:sweep,ring:ring,
          box:box,ball:ball,curve:curve,croissant:croissant,ice:ice,
+         iceTrain:iceTrain,track:trackPiece,BRAND:BRAND,
          vehicle:vehicle,tee:tee,teapot:teapot,
          program:program,draw:draw,mul:mul,mat:mat,chainPivot:chainPivot,
          STRIDE:STRIDE,FLOATS:11};

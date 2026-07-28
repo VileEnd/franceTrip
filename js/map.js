@@ -4,8 +4,15 @@
      zoomMode  'fixed' (Standard) · 'steps' · 'scenes'   → siehe unten
      zoom      Reise-Zoom für 'fixed'                     (Standard 9.6)
      vehicle   {model:'ice'|'train'|'bus'|'car'|'croissant', color, accent,
-                glass, light, size, tapModel:'croissant' (Antippen tauscht
-                das Modell; null schaltet das ab)}
+                glass, light,
+                size    Pixel je Modelllänge = Länge EINES Wagens,
+                cars    Anzahl Wagen (Standard 4, auf Phones 3),
+                pitch   Wagenabstand in Modelllängen (Standard 1.03),
+                track   false = ohne Gleis,
+                wordmark/logo  Beschriftung (Standard 'ICE' / 'DB',
+                        false lässt sie weg),
+                tapModel:'croissant' (Antippen tauscht das Modell;
+                        null schaltet das ab)}
      vehicle3d false = flaches Emoji statt 3D-Modell
      trainEmoji, routeColor, doneColor, stopColor, bg, terrain:false, pitchScale
    Stellt bereit: SB.mapCtl = { map, ready, zoomAt(), setVehicle() }
@@ -54,7 +61,11 @@ var startZoom=SB.mapCtl.zoomAt(SB.scenes[0],0);
 /* ---- Fahrzeug ------------------------------------------------------------ */
 var V=M.vehicle||{};
 var use3d=(M.vehicle3d!==false);
-var vehicle={pos:R[0].slice(),dir:[0,-1],size:V.size||(SB.isMobile?74:96)};
+/* size = Pixel je Modelllänge, also die Länge EINES Wagens. Der ganze Zug
+   ist entsprechend `cars` mal so lang — deshalb liegt der Wert deutlich
+   unter dem eines Einzelfahrzeugs. */
+var vehicle={pos:R[0].slice(),dir:[0,-1],f:0,
+             size:V.size||(SB.isMobile?52:68)};
 var baseKind=V.model||'ice';
 /* Antippen tauscht das Modell (tapModel:null schaltet den Gag ab). */
 var tapKind=(V.tapModel===undefined)?'croissant':V.tapModel;
@@ -74,38 +85,173 @@ function emojiImage(emoji,size){
 /* ---- 3D-Modell -----------------------------------------------------------
    Die Formen und der Shader stehen in js/mesh.js (SB.mesh) — dieselbe
    Basis nutzt das 3D-T-Shirt im Inhaltsteil. Hier bleibt nur, was mit der
-   Karte zu tun hat: Positionierung, Ausrichtung und Größe des Fahrzeugs.
-   Das Modell wird pro Frame auf eine feste Pixelgröße skaliert, damit es
-   bei jedem Zoom gleich groß erscheint.                                    */
+   Karte zu tun hat: Aufstellung, Ausrichtung und Größe des Zuges.
+   Alles wird pro Frame auf eine feste Pixelgröße skaliert, damit der Zug
+   bei jedem Zoom gleich groß erscheint.
+
+   Der Zug ist kein starres Modell, sondern eine Kette: Kopfwagen, Mittel-
+   wagen, gedrehter Kopfwagen — und unter jedem Wagen ein Gleisstück. Jedes
+   Teil wird einzeln auf die Route gesetzt, um genau seinen Abstand zur
+   Zugspitze zurückversetzt. Deshalb legt sich der Zug in Kurven an die
+   Strecke, statt sie als Balken abzuschneiden.                             */
 var MESH=SB.mesh;
 /* Auf der Karte bewusst gröber tesselliert als im eigenen Canvas: dort
    zählt jedes Detail, hier zählt jede Millisekunde pro Bild. */
-var DETAIL=V.detail||(SB.lowPower?0.5:0.75);
-function buildVehicleMesh(kind){
+/* Der Zug besteht jetzt aus mehreren Wagen: jeder einzelne ist auf dem
+   Schirm nur noch gut 60 px lang, also darf er gröber sein als früher das
+   Einzelfahrzeug — sonst zahlt man die Feinheit vier Mal. */
+var DETAIL=V.detail||(SB.lowPower?0.45:0.62);
+/* Mehrere Wagen und Gleis gibt es nur für den Triebzug — ein Bus oder ein
+   Auto fährt einzeln und ohne Schienen. */
+var isTrain=(baseKind==='ice');
+var CARS=Math.max(1,V.cars===undefined?(isTrain?(SB.isMobile?3:4):1):V.cars);
+var RAILS=isTrain&&V.track!==false;
+var PITCH=V.pitch||1.03;              // Wagenabstand in Modelllängen
+function meshCfg(){
   var C={};for(var k in V)C[k]=V[k];
-  C.detail=DETAIL;
-  return MESH.vehicle(kind,C);
+  C.detail=DETAIL;C.pitch=PITCH;
+  return C;
 }
 
-var layerApi={setKind:function(){}};
+/* ---- Route in Mercator vermessen ----------------------------------------
+   Die Wagenabstände stehen in Bildschirm-Pixeln fest. Umrechnen lassen die
+   sich nur dort, wo die Karte „gerade" ist — also in Mercator, nicht in
+   Längen-/Breitengraden.                                                   */
+var MR=[],MCUM=[0],MLEN=0;
+function measureRoute(){
+  MR=R.map(function(p){
+    var m=maplibregl.MercatorCoordinate.fromLngLat({lng:p[0],lat:p[1]});
+    return [m.x,m.y];
+  });
+  for(var i=1;i<MR.length;i++){
+    var dx=MR[i][0]-MR[i-1][0],dy=MR[i][1]-MR[i-1][1];
+    MCUM[i]=MCUM[i-1]+Math.sqrt(dx*dx+dy*dy);
+  }
+  MLEN=MCUM[MCUM.length-1];
+}
+/* Streckenanteil (so rechnet story.js) → Mercator-Bogenlänge. */
+function arcAt(f){
+  var t=f*route.LEN,i;
+  for(i=1;i<route.cum.length;i++)if(route.cum[i]>=t)break;
+  i=Math.min(i,route.cum.length-1);
+  var seg=Math.max(route.cum[i]-route.cum[i-1],1e-12);
+  return MCUM[i-1]+(MCUM[i]-MCUM[i-1])*((t-route.cum[i-1])/seg);
+}
+/* Bogenlänge → Punkt. Vor dem Anfang und hinter dem Ende geht es geradeaus
+   weiter, sonst stünde der Zug beim Start auf einem Haufen.               */
+function atArc(d){
+  var i,a,b,L;
+  if(d<=0){a=MR[0];b=MR[1];L=Math.max(MCUM[1],1e-12);}
+  else if(d>=MLEN){
+    i=MCUM.length-1;a=MR[i-1];b=MR[i];
+    L=Math.max(MLEN-MCUM[i-1],1e-12);d-=MCUM[i-1];
+  }else{
+    for(i=1;i<MCUM.length;i++)if(MCUM[i]>=d)break;
+    a=MR[i-1];b=MR[i];L=Math.max(MCUM[i]-MCUM[i-1],1e-12);d-=MCUM[i-1];
+  }
+  var dx=(b[0]-a[0])/L,dy=(b[1]-a[1])/L;
+  return [a[0]+dx*d,a[1]+dy*d];
+}
+/* Standort UND Blickrichtung eines Wagens. Die Richtung kommt aus der Sehne
+   über seine eigene Länge — ein reiner Segment-Tangens würde an jedem
+   Routenpunkt umspringen und den Zug zucken lassen.                       */
+function poseAt(d,half){
+  var p=atArc(d),a=atArc(d-half),b=atArc(d+half);
+  var dx=b[0]-a[0],dy=b[1]-a[1],l=Math.sqrt(dx*dx+dy*dy);
+  if(l<1e-12)return {x:p[0],y:p[1],dx:1,dy:0};
+  return {x:p[0],y:p[1],dx:dx/l,dy:dy/l};
+}
+
+/* ---- Beschriftung als Textur --------------------------------------------
+   Schriftzug und Logo liegen nebeneinander in einem kleinen Bild; welches
+   Feld wo liegt, steht in SB.mesh.BRAND — das Modell legt die passenden
+   Texturkoordinaten auf seine Flanken. Beides ist über den Trip frei
+   wählbar (`wordmark`, `logo`), `false` lässt es weg.                     */
+function brandTexture(gl){
+  var W=512,H=160,B=MESH.BRAND;
+  var word=V.wordmark===undefined?'ICE':V.wordmark,
+      logo=V.logo===undefined?'DB':V.logo;
+  var c=document.createElement('canvas');c.width=W;c.height=H;
+  var x=c.getContext('2d');
+  function paint(){
+    x.clearRect(0,0,W,H);
+    x.textAlign='center';x.textBaseline='middle';
+    x.fillStyle=V.color||'#EC0016';
+    if(word){
+      var w0=B.word[0]*W,w1=B.word[1]*W;
+      x.font='italic 900 '+Math.round(H*0.80)+'px Inter, system-ui, sans-serif';
+      x.fillText(String(word),(w0+w1)/2,H*0.54,(w1-w0)*0.90);
+    }
+    if(logo){
+      var l0=B.logo[0]*W,lw=(B.logo[1]-B.logo[0])*W;
+      var px=l0+lw*0.10,py=H*0.15,pw=lw*0.80,ph=H*0.70;
+      x.beginPath();
+      if(x.roundRect)x.roundRect(px,py,pw,ph,H*0.14);else x.rect(px,py,pw,ph);
+      x.fill();
+      x.fillStyle='#fff';
+      x.font='900 '+Math.round(H*0.46)+'px Inter, system-ui, sans-serif';
+      x.fillText(String(logo),px+pw/2,py+ph*0.54,pw*0.78);
+    }
+  }
+  var t=gl.createTexture();
+  function upload(){
+    gl.bindTexture(gl.TEXTURE_2D,t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,c);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    // Zwingend zurücksetzen: das ist MapLibres eigener Kontext.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+  }
+  paint();upload();
+  // Schrift kommt oft erst nach dem ersten Zeichnen an → einmal nachlegen.
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){
+    paint();upload();
+    var m=SB.mapCtl.map;if(m&&m.triggerRepaint)m.triggerRepaint();
+  });
+  return t;
+}
+
+/* ---- Der Zug als Kette von Teilen ---------------------------------------- */
+var layerApi={rebuild:function(){}};
 function makeVehicleLayer(map){
-  var P=null,buf=null,count=0,ctx=null;
+  var P=null,ctx=null,tex=null,parts=[],bufs={};
+  function upload(gl,name,data){
+    var m=bufs[name]||(bufs[name]={buf:gl.createBuffer(),count:0});
+    gl.bindBuffer(gl.ARRAY_BUFFER,m.buf);
+    gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+    m.count=data.length/MESH.FLOATS;
+    return m;
+  }
+  /* Aufstellung bauen. Beim Antippen wird nur das Wagen-Netz getauscht —
+     Gleis, Shader und Beschriftung bleiben stehen. `at` ist der Abstand
+     zur Zugspitze in Modelllängen.                                        */
+  function build(gl){
+    var C=meshCfg(),i;
+    parts=[];
+    if(RAILS){
+      if(!bufs.track)upload(gl,'track',MESH.track(C,PITCH+0.03));
+      for(i=0;i<CARS;i++)parts.push({n:'track',at:i*PITCH,turn:false});
+    }
+    if(currentKind==='ice'&&CARS>1){
+      var t=MESH.iceTrain(C);
+      upload(gl,'head',t.head);upload(gl,'mid',t.mid);
+      parts.push({n:'head',at:0,turn:false});
+      for(i=1;i<CARS-1;i++)parts.push({n:'mid',at:i*PITCH,turn:false});
+      parts.push({n:'head',at:(CARS-1)*PITCH,turn:true});
+    }else{
+      upload(gl,'single',MESH.vehicle(currentKind,C));
+      for(i=0;i<CARS;i++)parts.push({n:'single',at:i*PITCH,turn:false});
+    }
+  }
   return {
     id:'vehicle',type:'custom',renderingMode:'3d',
     onAdd:function(m,gl){
-      ctx=gl;
-      var mesh=buildVehicleMesh(currentKind);count=mesh.length/MESH.FLOATS;
-      P=MESH.program(gl);
-      buf=gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER,buf);
-      gl.bufferData(gl.ARRAY_BUFFER,mesh,gl.STATIC_DRAW);
-      // Modellwechsel: nur der Puffer wird neu gefüllt, Shader bleibt stehen.
-      layerApi.setKind=function(kind){
-        if(!ctx||!buf)return;
-        var next=buildVehicleMesh(kind);count=next.length/MESH.FLOATS;
-        ctx.bindBuffer(ctx.ARRAY_BUFFER,buf);
-        ctx.bufferData(ctx.ARRAY_BUFFER,next,ctx.STATIC_DRAW);
-      };
+      ctx=gl;P=MESH.program(gl);tex=brandTexture(gl);
+      build(gl);
+      layerApi.rebuild=function(){if(ctx)build(ctx);};
     },
     render:function(gl,arg){
       if(!P)return;
@@ -122,24 +268,33 @@ function makeVehicleLayer(map){
       var mc=maplibregl.MercatorCoordinate.fromLngLat(lngLat,alt);
       // 1 Mercator-Einheit = 512·2^zoom Pixel → feste Pixelgröße des Modells.
       var k=vehicle.size/(512*Math.pow(2,map.getZoom()));
-      var ux=vehicle.dir[0],uy=vehicle.dir[1];
-      var model=[ k*ux, k*uy,0,0,
-                 -k*uy, k*ux,0,0,
-                  0,0,k,0,
-                  mc.x,mc.y,mc.z||0,1];
-
-      // Licht aus Nordwest von oben, in den Modellraum gedreht (das
-      // mitgedrehte Fahrzeug soll die Beleuchtung nicht mitdrehen).
+      var head=MLEN?arcAt(vehicle.f):null;
+      // Licht aus Nordwest von oben, in den Modellraum gedreht (der
+      // mitgedrehte Wagen soll die Beleuchtung nicht mitdrehen).
       var lw=[-0.38,-0.52,0.76];
-      var lm=[lw[0]*ux+lw[1]*uy, -lw[0]*uy+lw[1]*ux, lw[2]];
 
       gl.depthMask(true);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
-      gl.clear(gl.DEPTH_BUFFER_BIT);   // letzter Layer → Fahrzeug immer sichtbar
+      gl.clear(gl.DEPTH_BUFFER_BIT);   // letzter Layer → Zug immer sichtbar
       gl.disable(gl.BLEND);
       gl.disable(gl.CULL_FACE);
-      MESH.draw(gl,P,buf,count,MESH.mul(mat,model),lm);
+      for(var i=0;i<parts.length;i++){
+        var part=parts[i],m=bufs[part.n];
+        if(!m||!m.count)continue;
+        var px=mc.x,py=mc.y,ux=vehicle.dir[0],uy=vehicle.dir[1];
+        if(head!==null){
+          var q=poseAt(head-part.at*k,k*0.42);
+          px=q.x;py=q.y;ux=q.dx;uy=q.dy;
+        }
+        if(part.turn){ux=-ux;uy=-uy;}
+        var model=[ k*ux, k*uy,0,0,
+                   -k*uy, k*ux,0,0,
+                    0,0,k,0,
+                    px,py,mc.z||0,1];
+        MESH.draw(gl,P,m.buf,m.count,MESH.mul(mat,model),
+          [lw[0]*ux+lw[1]*uy, -lw[0]*uy+lw[1]*ux, lw[2]],{tex:tex});
+      }
       gl.disable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
     }
@@ -158,7 +313,7 @@ function emoji4(kind){
 function applyModel(){
   var m=SB.mapCtl.map;
   if(has3d){
-    layerApi.setKind(currentKind);
+    layerApi.rebuild();
     if(m&&m.triggerRepaint)m.triggerRepaint();
   }else{
     try{if(m&&m.updateImage)m.updateImage('zug',emojiImage(emoji4(currentKind),96));}catch(e){}
@@ -183,8 +338,9 @@ function addHitArea(){
   b.addEventListener('click',toggleModel);
   stage.appendChild(b);
 }
-SB.mapCtl.setVehicle=function(pos,ahead){
+SB.mapCtl.setVehicle=function(pos,ahead,f){
   vehicle.pos=pos;
+  if(typeof f==='number')vehicle.f=f;
   if(ahead){
     // Richtung im Mercator-Raum bestimmen — dort ist die Karte „gerade“.
     var dx=ahead[0]-pos[0],dy=pos[1]-ahead[1];   // y wächst nach Süden
@@ -204,6 +360,7 @@ SB.mapCtl.setVehicle=function(pos,ahead){
 
 function boot(){
   if(typeof maplibregl==='undefined'){loading.textContent='Karte offline — bitte mit Internet öffnen. Der Rest fährt trotzdem.';return;}
+  measureRoute();
   var suf=SB.isMobile?'':'@2x';   // normale Tiles auf Phones = ein Viertel der Pixel
   var map=new maplibregl.Map({container:'map',interactive:false,
     pixelRatio:Math.min(window.devicePixelRatio||1,SB.isMobile?1.5:2),

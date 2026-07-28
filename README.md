@@ -67,7 +67,13 @@ SB.trip = {
     zoom: 9.6,                         // Reise-Zoom für 'fixed'
     vehicle:{ model:'ice',             // 'ice'|'train'|'bus'|'car'|'croissant'
               color:'#EC0016', accent:'#FFD800', glass:'#26313E',
-              light:'#F2F0EA', size:96,     // size = Bildschirmgröße in px
+              light:'#F2F0EA',
+              size:68,                      // px je WAGEN (Handy 52)
+              cars:4,                       // Anzahl Wagen (Handy 3); nur 'ice'
+              pitch:1.03,                   // Wagenabstand in Wagenlängen
+              track:false,                  // → ohne Gleis (Standard: mit)
+              wordmark:'ICE', logo:'DB',    // Beschriftung, false = ohne
+              rail:'#9AA0A6', tie:'#544941', ballast:'#918B82',
               tapModel:'croissant',         // Antippen tauscht das Modell (null = aus)
               tapTitle:'…', tapAria:'…', tapToast:'…', tapToastBack:'…' },
     vehicle3d:false,                   // → flaches Emoji statt 3D-Modell
@@ -162,16 +168,37 @@ Bildschirm-Pixeln), sitzt auf der Geländehöhe und wird über `vehicle.color` /
 `accent` / `glass` / `light` eingefärbt. Klappt WebGL nicht, fällt die Karte
 lautlos auf `trainEmoji` zurück; `vehicle3d:false` erzwingt das Emoji.
 
+**Der ICE ist ein ganzer Zug.** `model:'ice'` fährt als Triebzug aus
+`cars` Wagen: Kopfwagen, Mittelwagen (die tragen die Stromabnehmer) und
+zum Schluss derselbe Kopfwagen um 180° gedreht. Unter jedem Wagen liegt ein
+Gleisstück, sodass der Zug auf durchgehenden Schienen fährt (`track:false`
+nimmt sie weg). `size` ist dabei die Länge **eines Wagens** in Pixeln — der
+ganze Zug ist entsprechend `cars` mal so lang.
+
+Jeder Wagen wird **einzeln** auf die Route gesetzt, um genau seinen Abstand
+zur Zugspitze zurückversetzt. Dafür misst `js/map.js` die Route einmal in
+Mercator aus: nur dort lassen sich die in Pixeln festgelegten Wagenabstände
+in Streckenlängen umrechnen. Der Zug legt sich damit in Kurven an die
+Strecke, statt sie als starrer Balken abzuschneiden. Seine Blickrichtung
+nimmt jeder Wagen aus der Sehne über die eigene Länge — ein reiner
+Segment-Tangens würde an jedem Routenpunkt umspringen.
+
+Beschriftung (`wordmark`, `logo`) wird in ein kleines Canvas gezeichnet und
+als Textur auf die Flanken des Kopfwagens gelegt — derselbe Weg wie beim
+Brustdruck des T-Shirts. `false` lässt sie weg.
+
 | `model` | Form |
 |---------|------|
-| `'ice'` | ICE 3: heruntergezogene Nase mit umlaufender Bugscheibe, Fensterband mit einzelnen Scheiben, roter Zierstreifen, grauer Dachrand, Drehgestelle mit Rädern, einarmiger Stromabnehmer |
+| `'ice'` | ICE 3 als mehrteiliger Triebzug auf Gleis: heruntergezogene Nase mit umlaufender Bugscheibe, Fensterband mit einzelnen Scheiben, roter Zierstreifen unter den Fenstern, Beschriftung, Drehgestelle mit Rädern, einarmiger Stromabnehmer auf den Mittelwagen |
 | `'train'` | Lok mit gelber Bugpartie + Wagen |
 | `'bus'` | Reisebus |
 | `'car'` | Auto |
 | `'croissant'` | ein Hörnchen mit diagonalen Wickeln |
 
 **Antippen:** Ein Klick aufs Fahrzeug tauscht `model` gegen `tapModel` und
-wieder zurück — beim Frankreich-Trip fährt der ICE dann als Croissant weiter.
+wieder zurück — beim Frankreich-Trip fährt der ICE dann als Croissant weiter,
+und zwar als ganzer Croissant-Zug: die Aufstellung bleibt, nur das Wagen-Netz
+wird getauscht. Das Gleis bleibt liegen.
 Trefferfläche ist eine unsichtbare Schaltfläche in der Kartenmitte (dort
 fährt das Fahrzeug immer), damit das Ganze auch per Tastatur bedienbar
 bleibt — ein WebGL-Layer kennt keine anklickbaren Objekte. In der

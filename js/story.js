@@ -83,7 +83,8 @@ function render(p){
   var f=lerp(s.f0,s.f1,tt),pos=route.pointAt(f);
   // Blickpunkt kurz voraus → daraus leitet die Karte die Fahrtrichtung
   // (und damit die Ausrichtung des 3D-Modells) ab.
-  SB.mapCtl.setVehicle(pos,route.pointAt(Math.min(f+0.0015,1)));
+  // f geht mit: daraus setzt map.js die einzelnen Wagen auf die Strecke.
+  SB.mapCtl.setVehicle(pos,route.pointAt(Math.min(f+0.0015,1)),f);
 
   var t=f*route.LEN,coords=[route.R[0]];
   for(var k=1;k<route.cum.length;k++){if(route.cum[k]<=t)coords.push(route.R[k]);else break;}

@@ -38,8 +38,12 @@ SB.trip={
     zoomMode:'fixed',
     zoom:9.6,
     /* 3D-Fahrzeug: 'ice' | 'train' | 'bus' | 'car'. vehicle3d:false = Emoji.
-       Ein Tipp aufs Fahrzeug tauscht es gegen tapModel (null = aus). */
+       Ein Tipp aufs Fahrzeug tauscht es gegen tapModel (null = aus).
+       'ice' fährt als ganzer Triebzug auf Gleisen: cars = Anzahl Wagen,
+       size = Pixel je WAGEN, wordmark/logo = Beschriftung, track:false
+       nimmt die Schienen weg. */
     vehicle:{model:'ice',color:'#EC0016',accent:'#FFD800',glass:'#26313E',light:'#F4F2EE',
+      wordmark:'ICE',logo:'DB',   // cars bleibt offen: Handy 3, sonst 4
       tapModel:'croissant',
       tapTitle:'Antippen — auf eigene Gefahr',
       tapAria:'Zug antippen: als Croissant weiterfahren',
