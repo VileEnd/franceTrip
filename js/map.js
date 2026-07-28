@@ -3,7 +3,9 @@
    Liest trip.map (alle Felder optional):
      zoomMode  'fixed' (Standard) · 'steps' · 'scenes'   → siehe unten
      zoom      Reise-Zoom für 'fixed'                     (Standard 9.6)
-     vehicle   {model:'train'|'bus'|'car', color, accent, glass, light, size}
+     vehicle   {model:'ice'|'train'|'bus'|'car'|'croissant', color, accent,
+                glass, light, size, tapModel:'croissant' (Antippen tauscht
+                das Modell; null schaltet das ab)}
      vehicle3d false = flaches Emoji statt 3D-Modell
      trainEmoji, routeColor, doneColor, stopColor, bg, terrain:false, pitchScale
    Stellt bereit: SB.mapCtl = { map, ready, zoomAt(), setVehicle() }
@@ -53,6 +55,10 @@ var startZoom=SB.mapCtl.zoomAt(SB.scenes[0],0);
 var V=M.vehicle||{};
 var use3d=(M.vehicle3d!==false);
 var vehicle={pos:R[0].slice(),dir:[0,-1],size:V.size||(SB.isMobile?74:96)};
+var baseKind=V.model||'ice';
+/* Antippen tauscht das Modell (tapModel:null schaltet den Gag ab). */
+var tapKind=(V.tapModel===undefined)?'croissant':V.tapModel;
+var currentKind=baseKind;
 
 /* Emoji → Canvas-Bild (Rückfallebene, wenn kein 3D möglich/gewünscht ist) */
 function emojiImage(emoji,size){
@@ -88,15 +94,87 @@ function box(out,x0,x1,y0,y1,z0,z1,c){
     for(var j=0;j<6;j++)out.push(q[j][0],q[j][1],q[j][2],f[4],f[5],f[6],c[0],c[1],c[2]);
   }
 }
-function buildVehicleMesh(){
+/* Viereck mit Normale aus dem Kreuzprodukt (trägt auch schräge Flächen). */
+function quad(out,p0,p1,p2,p3,c){
+  var ax=p1[0]-p0[0],ay=p1[1]-p0[1],az=p1[2]-p0[2],
+      bx=p3[0]-p0[0],by=p3[1]-p0[1],bz=p3[2]-p0[2];
+  var nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;
+  var l=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;nx/=l;ny/=l;nz/=l;
+  var q=[p0,p1,p2,p0,p2,p3];
+  for(var i=0;i<6;i++)out.push(q[i][0],q[i][1],q[i][2],nx,ny,nz,c[0],c[1],c[2]);
+}
+/* „Gespannter“ Körper aus Rechteck-Querschnitten entlang x — damit lassen
+   sich zulaufende Formen bauen (ICE-Bug, Heck) statt nur Quader. */
+function hull(out,sc,c){
+  for(var i=0;i<sc.length-1;i++){
+    var a=sc[i],b=sc[i+1];
+    quad(out,[a.x,a.hy,a.z0],[a.x,a.hy,a.z1],[b.x,b.hy,b.z1],[b.x,b.hy,b.z0],c);        // +y
+    quad(out,[a.x,-a.hy,a.z1],[a.x,-a.hy,a.z0],[b.x,-b.hy,b.z0],[b.x,-b.hy,b.z1],c);    // -y
+    quad(out,[a.x,a.hy,a.z1],[a.x,-a.hy,a.z1],[b.x,-b.hy,b.z1],[b.x,b.hy,b.z1],c);      // oben
+    quad(out,[a.x,-a.hy,a.z0],[a.x,a.hy,a.z0],[b.x,b.hy,b.z0],[b.x,-b.hy,b.z0],c);      // unten
+  }
+  var f=sc[sc.length-1],r=sc[0];
+  quad(out,[f.x,f.hy,f.z0],[f.x,f.hy,f.z1],[f.x,-f.hy,f.z1],[f.x,-f.hy,f.z0],c);        // Bug
+  quad(out,[r.x,-r.hy,r.z0],[r.x,-r.hy,r.z1],[r.x,r.hy,r.z1],[r.x,r.hy,r.z0],c);        // Heck
+}
+function sec(x,hy,z0,z1){return {x:x,hy:hy,z0:z0,z1:z1};}
+
+/* ---- Croissant ----------------------------------------------------------
+   Ein Hörnchen lässt sich nicht aus Quadern bauen: hier läuft ein Kreis-
+   Querschnitt an einem Bogen entlang, wird zu den Spitzen hin dünner,
+   leicht platt gedrückt und bekommt über eine Radius-Welle die typischen
+   Wickel-Rippen.                                                           */
+function croissant(out,crust,toast){
+  var SEG=56,RING=14,ARC=2.70,RC=0.42,R0=0.185,FLAT=0.60,CX=0.33,RIB=7;
+  function pt(t,ph){
+    var a=-ARC/2+t*ARC,ca=Math.cos(a),sa=Math.sin(a);
+    var prof=Math.pow(Math.sin(Math.PI*t),0.8);
+    var r=R0*(0.10+0.90*prof)*(1+0.055*Math.cos(t*Math.PI*RIB));
+    var nx=ca*Math.cos(ph),ny=sa*Math.cos(ph),nz=Math.sin(ph);
+    return {p:[RC*ca-CX+r*nx, RC*sa+r*ny, r*nz*FLAT+R0*0.85],
+            n:[nx,ny,nz],prof:prof};
+  }
+  for(var i=0;i<SEG;i++){
+    for(var j=0;j<RING;j++){
+      var t0=i/SEG,t1=(i+1)/SEG,f0=j/RING*Math.PI*2,f1=(j+1)/RING*Math.PI*2;
+      var A=pt(t0,f0),B=pt(t0,f1),C=pt(t1,f1),D=pt(t1,f0);
+      // Spitzen dunkler gebacken, Rillen zwischen den Wickeln abgedunkelt.
+      var bake=(0.74+0.26*A.prof)*(0.90+0.10*Math.cos(t0*Math.PI*RIB));
+      var top=0.5+0.5*A.n[2];
+      var c=[crust[0]*bake+(toast[0]-crust[0])*(1-top)*0.5,
+             crust[1]*bake+(toast[1]-crust[1])*(1-top)*0.5,
+             crust[2]*bake+(toast[2]-crust[2])*(1-top)*0.5];
+      var q=[A,B,C,A,C,D];
+      for(var k=0;k<6;k++)out.push(q[k].p[0],q[k].p[1],q[k].p[2],
+                                   q[k].n[0],q[k].n[1],q[k].n[2],c[0],c[1],c[2]);
+    }
+  }
+}
+
+function buildVehicleMesh(kind){
   var body=hexRGB(V.color,COLORS.route),
       accent=hexRGB(V.accent,'#FFD800'),
       glass=hexRGB(V.glass,'#26313E'),
       light=hexRGB(V.light,'#F2F0EA'),
       dark=[0.16,0.17,0.19];
-  var v=[],kind=V.model||'train';
+  var v=[];
   // +x zeigt nach vorn: Bug/Front liegt bei +0.5, Heck bei -0.5.
-  if(kind==='bus'){
+  if(kind==='croissant'){
+    croissant(v,hexRGB(V.crust,'#E0A552'),hexRGB(V.toast,'#A9662A'));
+  }else if(kind==='ice'){
+    /* ICE: weißer, spitz zulaufender Wagenkasten mit rotem Zierstreifen. */
+    box(v,-0.45,0.45,-0.126,0.126,0.000,0.066,dark);          // Untergestell
+    hull(v,[sec(-0.50,0.050,0.115,0.180),sec(-0.44,0.104,0.082,0.246),
+            sec(-0.34,0.142,0.062,0.290),sec(0.34,0.142,0.062,0.290),
+            sec(0.44,0.104,0.082,0.246),sec(0.50,0.050,0.115,0.180)],light);
+    hull(v,[sec(-0.455,0.074,0.196,0.236),sec(-0.35,0.147,0.204,0.268),
+            sec(0.35,0.147,0.204,0.268),sec(0.455,0.074,0.196,0.236)],glass);
+    hull(v,[sec(-0.462,0.078,0.180,0.196),sec(-0.36,0.148,0.186,0.204),
+            sec(0.36,0.148,0.186,0.204),sec(0.462,0.078,0.180,0.196)],body);
+    box(v,-0.10,0.05,-0.020,0.020,0.290,0.334,dark);          // Stromabnehmer
+    box(v,0.455,0.492,-0.046,-0.014,0.128,0.156,accent);      // Spitzenlichter
+    box(v,0.455,0.492,0.014,0.046,0.128,0.156,accent);
+  }else if(kind==='bus'){
     box(v,-0.46,0.46,-0.155,0.155,0.00,0.075,dark);          // Fahrwerk
     box(v,-0.50,0.50,-0.175,0.175,0.06,0.42,body);           // Aufbau
     box(v,-0.485,0.485,-0.182,0.182,0.24,0.355,glass);       // Fensterband
@@ -144,12 +222,14 @@ function mul(a,b){
   return o;
 }
 
+var layerApi={setKind:function(){}};
 function makeVehicleLayer(map){
-  var gl_prog=null,buf=null,count=0,loc={};
+  var gl_prog=null,buf=null,count=0,loc={},ctx=null;
   return {
     id:'vehicle',type:'custom',renderingMode:'3d',
     onAdd:function(m,gl){
-      var mesh=buildVehicleMesh();count=mesh.length/9;
+      ctx=gl;
+      var mesh=buildVehicleMesh(currentKind);count=mesh.length/9;
       gl_prog=gl.createProgram();
       gl.attachShader(gl_prog,compile(gl,gl.VERTEX_SHADER,VERT));
       gl.attachShader(gl_prog,compile(gl,gl.FRAGMENT_SHADER,FRAG));
@@ -163,6 +243,13 @@ function makeVehicleLayer(map){
       buf=gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER,buf);
       gl.bufferData(gl.ARRAY_BUFFER,mesh,gl.STATIC_DRAW);
+      // Modellwechsel: nur der Puffer wird neu gefüllt, Shader bleibt stehen.
+      layerApi.setKind=function(kind){
+        if(!ctx||!buf)return;
+        var next=buildVehicleMesh(kind);count=next.length/9;
+        ctx.bindBuffer(ctx.ARRAY_BUFFER,buf);
+        ctx.bufferData(ctx.ARRAY_BUFFER,next,ctx.STATIC_DRAW);
+      };
     },
     render:function(gl,arg){
       if(!gl_prog)return;
@@ -218,8 +305,43 @@ function makeVehicleLayer(map){
   };
 }
 
-/* ---- Öffentliche Fahrzeug-Schnittstelle (story.js ruft das pro Frame) ---- */
+/* ---- Antippen: Modell tauschen ------------------------------------------
+   Das Fahrzeug fährt immer im Kartenmittelpunkt — deshalb reicht eine
+   unsichtbare, mittig platzierte Schaltfläche als Trefferfläche. Sie ist
+   zugleich per Tastatur bedienbar, was bei einem WebGL-Layer sonst nicht
+   ginge: der kennt keine anklickbaren Objekte.                             */
 var has3d=false;
+function emoji4(kind){
+  return kind==='croissant'?(V.tapEmoji||'🥐'):(M.trainEmoji||'🚆');
+}
+function applyModel(){
+  var m=SB.mapCtl.map;
+  if(has3d){
+    layerApi.setKind(currentKind);
+    if(m&&m.triggerRepaint)m.triggerRepaint();
+  }else{
+    try{if(m&&m.updateImage)m.updateImage('zug',emojiImage(emoji4(currentKind),96));}catch(e){}
+  }
+}
+function toggleModel(){
+  if(!tapKind)return;
+  currentKind=(currentKind===baseKind)?tapKind:baseKind;
+  applyModel();
+  if(SB.showToast)SB.showToast(currentKind===baseKind
+    ?(V.tapToastBack||'🚄 Weiter im Takt.')
+    :(V.tapToast||'🥐 Croissant-Express — bon voyage!'));
+}
+function addHitArea(){
+  if(!tapKind)return;
+  var stage=document.getElementById('stage');
+  if(!stage||document.getElementById('vehiclehit'))return;
+  var b=document.createElement('button');
+  b.id='vehiclehit';b.type='button';
+  b.title=V.tapTitle||'Antippen';
+  b.setAttribute('aria-label',V.tapAria||'Fahrzeug antippen: Modell wechseln');
+  b.addEventListener('click',toggleModel);
+  stage.appendChild(b);
+}
 SB.mapCtl.setVehicle=function(pos,ahead){
   vehicle.pos=pos;
   if(ahead){
@@ -276,9 +398,10 @@ function boot(){
       try{map.addLayer(makeVehicleLayer(map));has3d=true;}catch(e){has3d=false;}
     }
     if(!has3d){
-      map.addImage('zug',emojiImage(M.trainEmoji||'🚆',96),{pixelRatio:2});
+      map.addImage('zug',emojiImage(emoji4(currentKind),96),{pixelRatio:2});
       map.addLayer({id:'train',type:'symbol',source:'train',layout:{'icon-image':'zug','icon-size':0.62,'icon-allow-overlap':true,'icon-ignore-placement':true}});
     }
+    addHitArea();
     SB.mapCtl.ready=true;loading.classList.add('aus');
     SB.requestRender&&SB.requestRender();
   });

@@ -61,9 +61,11 @@ SB.trip = {
   map: {                               // alles optional
     zoomMode:'fixed',                  // 'fixed' | 'steps' | 'scenes' – siehe unten
     zoom: 9.6,                         // Reise-Zoom für 'fixed'
-    vehicle:{ model:'train',           // 'train' | 'bus' | 'car'
+    vehicle:{ model:'ice',             // 'ice'|'train'|'bus'|'car'|'croissant'
               color:'#EC0016', accent:'#FFD800', glass:'#26313E',
-              light:'#F2F0EA', size:96 },   // size = Bildschirmgröße in px
+              light:'#F2F0EA', size:96,     // size = Bildschirmgröße in px
+              tapModel:'croissant',         // Antippen tauscht das Modell (null = aus)
+              tapTitle:'…', tapAria:'…', tapToast:'…', tapToastBack:'…' },
     vehicle3d:false,                   // → flaches Emoji statt 3D-Modell
     trainEmoji:'🚆',                   // nur für die Emoji-Variante
     routeColor:'#EC0016', doneColor:'#FFD800', stopColor:'#EC0016',
@@ -140,12 +142,28 @@ dazu. Genau das ruckelt. Deshalb:
 
 ### Das 3D-Fahrzeug
 
-Das Fahrzeug ist ein kleines Klötzchen-Modell in reinem WebGL (MapLibre-
-Custom-Layer) — keine Fremdbibliothek, kein Modell-Download, kein Build.
-Es zeigt immer in Fahrtrichtung, bleibt bei jedem Zoom gleich groß
-(`vehicle.size` in Bildschirm-Pixeln) und wird über `vehicle.color` /
+Das Fahrzeug ist ein Modell in reinem WebGL (MapLibre-Custom-Layer) — keine
+Fremdbibliothek, kein Modell-Download, kein Build-Schritt. Es zeigt immer in
+Fahrtrichtung, bleibt bei jedem Zoom gleich groß (`vehicle.size` in
+Bildschirm-Pixeln), sitzt auf der Geländehöhe und wird über `vehicle.color` /
 `accent` / `glass` / `light` eingefärbt. Klappt WebGL nicht, fällt die Karte
 lautlos auf `trainEmoji` zurück; `vehicle3d:false` erzwingt das Emoji.
+
+| `model` | Form |
+|---------|------|
+| `'ice'` | weißer Hochgeschwindigkeitszug, spitz zulaufend, roter Zierstreifen, Stromabnehmer |
+| `'train'` | Lok mit gelber Bugpartie + Wagen |
+| `'bus'` | Reisebus |
+| `'car'` | Auto |
+| `'croissant'` | ein Hörnchen (gebogen, mit Wickel-Rippen) |
+
+**Antippen:** Ein Klick aufs Fahrzeug tauscht `model` gegen `tapModel` und
+wieder zurück — beim Frankreich-Trip fährt der ICE dann als Croissant weiter.
+Trefferfläche ist eine unsichtbare Schaltfläche in der Kartenmitte (dort
+fährt das Fahrzeug immer), damit das Ganze auch per Tastatur bedienbar
+bleibt — ein WebGL-Layer kennt keine anklickbaren Objekte. In der
+Emoji-Rückfallebene wird stattdessen das Symbol getauscht (`tapEmoji`).
+`tapModel:null` schaltet den Gag ab.
 
 ### Tipps fürs Routen-Bauen
 

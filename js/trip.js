@@ -37,8 +37,14 @@ SB.trip={
        Szene, 'scenes' = die alten, durchgehenden Zoomfahrten. */
     zoomMode:'fixed',
     zoom:9.6,
-    /* 3D-Fahrzeug: 'train' | 'bus' | 'car'. vehicle3d:false = Emoji. */
-    vehicle:{model:'train',color:'#EC0016',accent:'#FFD800',glass:'#26313E'},
+    /* 3D-Fahrzeug: 'ice' | 'train' | 'bus' | 'car'. vehicle3d:false = Emoji.
+       Ein Tipp aufs Fahrzeug tauscht es gegen tapModel (null = aus). */
+    vehicle:{model:'ice',color:'#EC0016',accent:'#FFD800',glass:'#26313E',light:'#F4F2EE',
+      tapModel:'croissant',
+      tapTitle:'Antippen — auf eigene Gefahr',
+      tapAria:'Zug antippen: als Croissant weiterfahren',
+      tapToast:'🥐 Croissant-Express — bon voyage!',
+      tapToastBack:'🚄 Zurück auf die Schiene.'},
     trainEmoji:'🚆'
     // Optional überschreibbar: routeColor, doneColor, stopColor, bg,
     //   terrain:false, pitchScale, vehicle3d:false
