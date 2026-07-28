@@ -48,7 +48,7 @@ var SVG=[
   '        </clipPath>',
   '        <!-- Formen für die Cel-Schattierung (jeweils lokale Koordinaten) -->',
   '        <clipPath id="zkDoseForm">',
-  '          <path d="M-16,-10 C-30,-18 -35,-32 -34,-45 C-33,-58 -25,-68 -19,-80 L19,-80 C25,-68 33,-58 34,-45 C35,-32 30,-18 16,-10 Z"/>',
+  '          <path d="M-13,-7 C-30,-11 -40,-18 -40,-27 C-40,-38 -29,-43 -22,-47 L22,-47 C29,-43 40,-38 40,-27 C40,-18 30,-11 13,-7 Z"/>',
   '        </clipPath>',
   '        <clipPath id="zkTasseForm">',
   '          <path d="M-33,-52 C-32,-33 -28,-15 -22,-8 A22 5.5 0 0 0 22,-8 C28,-15 32,-33 33,-52 Z"/>',
@@ -63,6 +63,12 @@ var SVG=[
   '          <stop offset=".5" stop-color="#000" stop-opacity="0"/>',
   '          <stop offset="1" stop-color="#0F0B06" stop-opacity=".5"/>',
   '        </radialGradient>',
+  '        <!-- Handstrich: verschiebt alle Kanten minimal entlang eines',
+  '             Rauschfeldes — aus glatten Vektorkurven werden krakelige Striche -->',
+  '        <filter id="zkSkizze" x="-6%" y="-6%" width="112%" height="112%">',
+  '          <feTurbulence type="fractalNoise" baseFrequency="0.015 0.021" numOctaves="3" seed="11" result="wolke"/>',
+  '          <feDisplacementMap in="SourceGraphic" in2="wolke" scale="2.3" xChannelSelector="R" yChannelSelector="G"/>',
+  '        </filter>',
   '        <!-- Filmkorn: liegt als eigene, unbewegte Fläche obenauf -->',
   '        <filter id="zkKorn" x="0" y="0" width="100%" height="100%">',
   '          <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" stitchTiles="stitch"/>',
@@ -133,7 +139,7 @@ var SVG=[
   '          <circle class="zk-korn-zucker" cx="376" cy="203" r="2"/>',
   '          <circle class="zk-korn-zucker" cx="551" cy="210" r="2.2"/>',
   '        </g>',
-  '        <g id="zk-haufen" transform="translate(404,196) scale(0,0)">',
+  '        <g id="zk-haufen" transform="translate(556,196) scale(0,0)">',
   '          <ellipse class="zk-schlagschatten" cx="0" cy="0" rx="26" ry="6"/>',
   '          <path class="zk-fuellung" d="M-23,0 C-18,-19 -7,-30 0,-30 C8,-30 18,-18 23,0 Z"/>',
   '          <path class="zk-zuckerton" d="M3,-29 C12,-24 19,-12 22,0 L8,0 C8,-11 6,-21 3,-29 Z"/>',
@@ -145,34 +151,44 @@ var SVG=[
   '          <path class="zk-funke" d="M0,-6 L1.5,-1.5 L6,0 L1.5,1.5 L0,6 L-1.5,1.5 L-6,0 L-1.5,-1.5 Z" transform="translate(396,132)"/>',
   '        </g>',
   '',
-  '        <!-- Zuckerstrahl + einzelne Körner -->',
-  '        <path id="zk-strahl" class="zk-fuellung" d="" opacity="0"/>',
+  '        <!-- Rieselnde Körner -->',
   '        <g id="zk-koerner"></g>',
   '',
   '        <!-- Die Zuckerdose: Schatten bleibt auf dem Tisch, die Dose hüpft -->',
-  '        <ellipse id="zk-schatten" class="zk-schlagschatten" cx="0" cy="0" rx="28" ry="6.5" transform="translate(62,196)"/>',
+  '        <ellipse id="zk-schatten" class="zk-schlagschatten" cx="0" cy="0" rx="32" ry="7" transform="translate(62,196)"/>',
   '        <g id="zk-dose" transform="translate(62,196)">',
-  '          <path class="zk-henkel-um" d="M-33,-58 C-52,-58 -54,-32 -30,-28"/>',
-  '          <path class="zk-henkel" d="M-33,-58 C-52,-58 -54,-32 -30,-28"/>',
-  '          <path class="zk-keramik" d="M-16,-10 C-30,-18 -35,-32 -34,-45 C-33,-58 -25,-68 -19,-80 L19,-80 C25,-68 33,-58 34,-45 C35,-32 30,-18 16,-10 Z"/>',
+  '          <!-- Löffel liegt HINTER der Dose: beim Schöpfen verschwindet die',
+  '               Laffe dadurch im Topf, beim Ausschütten steht sie frei. -->',
+  '          <g id="zk-loeffel" transform="translate(42,-62) rotate(28)">',
+  '            <path class="zk-stiel-um" d="M0,15 L0,-24"/>',
+  '            <path class="zk-stiel" d="M0,15 L0,-24"/>',
+  '            <path class="zk-loeffelkopf" d="M0,-37 C7,-33 7.5,-20 0,-15 C-7.5,-20 -7,-33 0,-37 Z"/>',
+  '            <path class="zk-loeffelglanz" d="M-2,-31 C1.5,-29 2,-24 0,-21"/>',
+  '            <path id="zk-loeffelzucker" class="zk-fuellung" opacity="0" d="M-5,-25 C-4,-31 -1,-34 0,-34 C1,-34 4,-31 5,-25 C3,-23 -3,-23 -5,-25 Z"/>',
+  '          </g>',
+  '          <!-- Urnenform: breiter Bauch, eingezogene Taille, ausgestellter Kragen -->',
+  '          <path class="zk-keramik" d="M-13,-7 C-30,-11 -40,-18 -40,-27 C-40,-38 -29,-43 -22,-47 L22,-47 C29,-43 40,-38 40,-27 C40,-18 30,-11 13,-7 Z"/>',
   '          <g clip-path="url(#zkDoseForm)">',
-  '            <ellipse class="zk-ton" cx="31" cy="-40" rx="18" ry="34" transform="rotate(-8,31,-40)"/>',
-  '            <ellipse class="zk-glanzflaeche" cx="-19" cy="-52" rx="7" ry="15" transform="rotate(14,-19,-52)"/>',
-  '            <ellipse class="zk-glanzflaeche" cx="-24" cy="-33" rx="4" ry="7" transform="rotate(14,-24,-33)"/>',
+  '            <path class="zk-ton" d="M16,-47 C31,-41 41,-33 40,-23 C39,-13 29,-7 14,-5 L-8,-5 C14,-11 26,-24 24,-38 Z"/>',
   '          </g>',
-  '          <ellipse class="zk-keramik" cx="0" cy="-5" rx="20" ry="6"/>',
-  '          <ellipse class="zk-innen" cx="0" cy="-80" rx="19" ry="5"/>',
-  '          <g id="zk-loeffel" transform="rotate(0,10,-82)">',
-  '            <path class="zk-stiel" d="M-20,-101 L28,-68"/>',
-  '            <ellipse class="zk-loeffelkopf" cx="-27" cy="-105" rx="11.5" ry="7" transform="rotate(-33,-27,-105)"/>',
-  '            <path class="zk-loeffelglanz" d="M-31,-108 C-27,-110 -23,-109 -21,-107"/>',
+  '          <path class="zk-locke" d="M-25,-33 C-34,-31 -35,-18 -26,-16 C-20,-15 -18,-19 -19,-23"/>',
+  '          <path class="zk-keramik" d="M-22,-47 L-31,-58 L31,-58 L22,-47 Z"/>',
+  '          <ellipse class="zk-innen" cx="0" cy="-58" rx="31" ry="6.5"/>',
+  '          <!-- Linker Arm: greift den Knauf des Deckels und hebt ihn hoch -->',
+  '          <g id="zk-deckel" transform="rotate(0,-32,-40)">',
+  '            <path class="zk-arm-um" d="M-32,-40 C-41,-52 -26,-64 -9,-69"/>',
+  '            <path class="zk-arm" d="M-32,-40 C-41,-52 -26,-64 -9,-69"/>',
+  '            <path class="zk-keramik" d="M-28,-62 C-18,-69 14,-69 24,-62 C14,-55 -18,-55 -28,-62 Z"/>',
+  '            <path class="zk-keramik" d="M-13,-65 C-13,-71 -3,-71 -3,-65 Z"/>',
+  '            <circle class="zk-hand" cx="-8" cy="-69" r="4.5"/>',
   '          </g>',
-  '          <g id="zk-deckel" transform="rotate(0,-19,-80)">',
-  '            <path class="zk-keramik" d="M-23,-80 C-23,-90 -12,-95 0,-95 C12,-95 23,-90 23,-80 Z"/>',
-  '            <path class="zk-ton" d="M9,-94 C17,-91 23,-86 23,-80 L11,-80 C11,-86 11,-91 9,-94 Z"/>',
-  '            <path class="zk-keramik" d="M-4.5,-95 L-4.5,-100 C-4.5,-104 4.5,-104 4.5,-100 L4.5,-95 Z"/>',
-  '            <ellipse class="zk-keramik" cx="0" cy="-103" rx="6" ry="3.6"/>',
+  '          <!-- Rechter Arm: die Hand hält den Löffel (der Löffel folgt ihr) -->',
+  '          <g id="zk-arm-r" transform="rotate(0,30,-40)">',
+  '            <path class="zk-arm-um" d="M30,-40 C39,-50 39,-57 42,-62"/>',
+  '            <path class="zk-arm" d="M30,-40 C39,-50 39,-57 42,-62"/>',
+  '            <circle class="zk-hand" cx="42" cy="-62" r="4.5"/>',
   '          </g>',
+  '          <path class="zk-keramik" d="M-13,-8 L13,-8 L18,0 C18,2.5 -18,2.5 -18,0 Z"/>',
   '        </g>',
   '      </g>',
   '',
@@ -194,23 +210,34 @@ host.appendChild(sek);
 
 var buehne=document.getElementById('zuckerbuehne');
 var szene=document.getElementById('zk-szene');
+/* Der Handstrich-Filter kostet pro Bild Rechenzeit — auf Handys bleiben die
+   Linien deshalb glatt (dort ist die Szene ohnehin klein). */
+if(szene&&!SB.isMobile)szene.setAttribute('filter','url(#zkSkizze)');
 var dose=document.getElementById('zk-dose'),schatten=document.getElementById('zk-schatten'),
     loeffel=document.getElementById('zk-loeffel'),deckel=document.getElementById('zk-deckel'),
+    armR=document.getElementById('zk-arm-r'),
     pegel=document.getElementById('zk-pegel'),berg=document.getElementById('zk-berg'),
-    haufen=document.getElementById('zk-haufen'),strahl=document.getElementById('zk-strahl'),
+    haufen=document.getElementById('zk-haufen'),
     koernerBox=document.getElementById('zk-koerner'),funken=document.getElementById('zk-funken'),
+    loeffelzucker=document.getElementById('zk-loeffelzucker'),
     streu=document.getElementById('zk-streu'),
     cap=document.getElementById('zk-cap');
 
 /* ---- Bühnenmaße (alles in viewBox-Einheiten) -------------------------------- */
 var BASE=196,          // Tischkante: darauf steht alles
     X0=62,             // Startplatz links
-    X1=350,            // Gießplatz links neben der Tasse
+    X1=392,            // Schöpfplatz dicht neben der Tasse
     TASSE=470,RAND=144,// Tassenmitte & Tassenrand
     PEGEL_LEER=202,PEGEL_VOLL=144,
-    KIPP=46,           // Kippwinkel beim Gießen (Drehpunkt: rechte Fußkante)
-    STEMM=8,           // so weit stemmt sie sich beim Gießen hoch
-    LIPPE_X=19,LIPPE_Y=-80,   // Ausgusslippe (Halsrand) in Dosen-Koordinaten
+    DECKEL_AUF=70,     // so weit hebt der linke Arm den Deckel am Knauf hoch
+    SCHULTER_X=30,SCHULTER_Y=-40,   // rechte Schulter (Löffelarm)
+    LSCHULTER_X=-32,                // linke Schulter (Deckelarm)
+    HAND_X=42,HAND_Y=-62,           // Hand in Ruhelage (sie hält den Löffel)
+    LAFFE=26,          // Abstand Griff → Laffe
+    ARM_TAUCH=-75,     // Arm schwenkt den Löffel in die Dose
+    ARM_TASSE=-5,      // …und dann über die Tasse
+    LOEF_RUHE=28,LOEF_TAUCH=182,LOEF_TRAGEN=10,LOEF_KIPP=85,
+    DREH_X=15,         // Kippkante: rechter Fußrand
     HUB=15,            // Hüpfhöhe
     HUEPFER=5,         // Hüpfer pro Weg
     TAKT=1/12;         // „auf Zweien": 12 Zeichnungen je Sekunde, wie im Trickfilm
@@ -220,8 +247,8 @@ var STUFEN=[0,.30,.55,.79,1];
 var TEXTE=(Z.captions&&Z.captions.length===STUFEN.length)?Z.captions:STANDARDTEXTE;
 
 /* ---- Zeitplan einer Runde (Sekunden) ---------------------------------------- */
-var PHASEN=[['hin',1.25],['ansatz',.22],['kipp',.3],['giess',.8],['auf',.3],
-            ['dreh',.18],['rueck',1.15],['dreh2',.18],['ruhe',.2]];
+var PHASEN=[['hin',1.15],['ansatz',.2],['deckel',.3],['tauchen',.45],['heben',.4],
+            ['giess',.8],['zurueck',.45],['dreh',.18],['rueck',1.05],['dreh2',.18],['ruhe',.2]];
 var RUNDE=0;for(var pi=0;pi<PHASEN.length;pi++)RUNDE+=PHASEN[pi][1];
 var RUNDEN=STUFEN.length-1,FINALE=4.2,LEEREN=1;
 var ZYKLUS=RUNDEN*RUNDE+FINALE+LEEREN;
@@ -241,43 +268,62 @@ function phase(lt){
 /* Hüpfen: Sinusbogen + Squash bei der Landung, Stretch im Scheitel. */
 function huepfen(s,p,n,dir){
   var w=p*n*Math.PI,h=Math.abs(Math.sin(w));
+  s.gang=w;
   var land=Math.pow(1-h,6);
   s.y=-HUB*h;
   s.rot=Math.cos(w)*7*dir;          // beim Abstoßen nach vorn, bei der Landung zurück
-  s.sqx=1+.13*land;
-  s.sqy=1-.13*land+.06*h*h*h;
+  s.sqx=1+.16*land;
+  s.sqy=1-.16*land+.08*h*h*h;
+}
+
+/* Beim Marschieren schlenkern beide Arme gegenläufig mit — sonst sieht der
+   Gang geschoben aus statt gelaufen. */
+function gangArme(s){
+  s.armR=Math.sin(s.gang)*10;
+  s.deck=-Math.sin(s.gang)*7;
+  s.loef=LOEF_RUHE+Math.sin(s.gang+1)*6;
 }
 
 /* ---- Zeitleiste: die ganze Szene als Funktion von t ------------------------- */
 function zustand(t){
   var s={x:X0,y:0,rot:0,tilt:0,dir:1,sqx:1,sqy:1,loef:0,deck:0,
-         pegel:0,berg:0,haufen:0,strahl:0,giessP:0,funke:0,text:0,zitterX:0,zitterY:0};
+         armR:0,gang:0,pegel:0,berg:0,haufen:0,strahl:0,giessP:0,funke:0,zuckerLoef:0,text:0,zitterX:0,zitterY:0};
   var bild=Math.round(t/TAKT);                  // laufende Nummer der Zeichnung
   s.zitterX=(bild*7%3-1)*.45;s.zitterY=(bild*11%3-1)*.4;
   if(t<RUNDEN*RUNDE){
     var r=Math.floor(t/RUNDE),lt=t-r*RUNDE,ph=phase(lt),p=ph.p,e;
-    s.text=r;s.pegel=STUFEN[r];
+    s.text=r;s.pegel=STUFEN[r];s.loef=LOEF_RUHE;
     switch(ph.n){
       case 'hin':
-        s.x=lerp(X0,X1,weich(p));huepfen(s,p,HUEPFER,1);
-        s.loef=Math.sin(p*HUEPFER*2*Math.PI)*11;break;
-      case 'ansatz':                                  // kurz sammeln, Deckel wackelt
-        s.x=X1;s.rot=-6*Math.sin(p*Math.PI);s.loef=-9*p;s.deck=-8*p;break;
-      case 'kipp':
-        e=weich(p);s.x=X1;s.tilt=KIPP*e;s.y=-STEMM*e;s.deck=-8-37*e;s.loef=-9-36*e;break;
-      case 'giess':
-        s.x=X1;s.y=-STEMM;s.deck=-45;s.tilt=KIPP+Math.sin(p*Math.PI*4)*1.8;
-        s.loef=-45+Math.sin(p*Math.PI*6)*5;
-        s.giessP=p;s.strahl=clamp(p*7,0,1)*clamp((1-p)*7,0,1);
+        s.x=lerp(X0,X1,weich(p));huepfen(s,p,HUEPFER,1);gangArme(s);break;
+      case 'ansatz':                                  // stehenbleiben, durchatmen
+        s.x=X1;s.rot=-5*Math.sin(p*Math.PI);break;
+      case 'deckel':                                  // linker Arm hebt den Deckel
+        s.x=X1;s.deck=-DECKEL_AUF*weich(p);break;
+      case 'tauchen':                                 // Löffel in die Dose, schöpfen
+        e=weich(p);s.x=X1;s.deck=-DECKEL_AUF;
+        s.armR=ARM_TAUCH*e;s.loef=lerp(LOEF_RUHE,LOEF_TAUCH,e);
+        if(p>.55)s.loef+=Math.sin((p-.55)*Math.PI*9)*7;   // im Zucker rühren
+        s.zuckerLoef=clamp((p-.6)/.3,0,1);break;
+      case 'heben':                                   // gefüllt raus und rüber
+        e=weich(p);s.x=X1;s.deck=-DECKEL_AUF;s.zuckerLoef=1;
+        s.armR=lerp(ARM_TAUCH,ARM_TASSE,e);s.loef=lerp(LOEF_TAUCH,LOEF_TRAGEN,e);break;
+      case 'giess':                                   // Laffe kippt, Zucker rieselt
+        e=weich(clamp(p*1.8,0,1));
+        s.x=X1;s.deck=-DECKEL_AUF;s.armR=ARM_TASSE;s.tilt=3;
+        s.loef=lerp(LOEF_TRAGEN,LOEF_KIPP,e)+Math.sin(p*Math.PI*7)*2;
+        s.giessP=p;s.strahl=clamp(p*6,0,1)*clamp((1-p)*6,0,1);
+        s.zuckerLoef=1-weich(clamp((p-.08)/.45,0,1));
         s.pegel=lerp(STUFEN[r],STUFEN[r+1],weich(p));break;
-      case 'auf':
-        e=weich(p);s.x=X1;s.tilt=KIPP*(1-e);s.y=-STEMM*(1-e);s.deck=-45*(1-e);s.loef=-45*(1-e);
+      case 'zurueck':                                 // Arme zurück, Deckel zu
+        e=weich(p);s.x=X1;s.deck=-DECKEL_AUF*(1-e);
+        s.armR=ARM_TASSE*(1-e);s.loef=lerp(LOEF_KIPP,LOEF_RUHE,e);
         s.pegel=STUFEN[r+1];break;
-      case 'dreh':                                    // Kehrtwende: einmal auf der Stelle
+      case 'dreh':                                    // Kehrtwende auf der Stelle
         s.x=X1;s.dir=Math.cos(p*Math.PI);s.y=-12*Math.sin(p*Math.PI);s.pegel=STUFEN[r+1];break;
       case 'rueck':
-        s.x=lerp(X1,X0,weich(p));s.dir=-1;huepfen(s,p,HUEPFER,-1);
-        s.loef=Math.sin(p*HUEPFER*2*Math.PI)*11;s.pegel=STUFEN[r+1];break;
+        s.x=lerp(X1,X0,weich(p));s.dir=-1;huepfen(s,p,HUEPFER,-1);gangArme(s);
+        s.pegel=STUFEN[r+1];break;
       case 'dreh2':
         s.x=X0;s.dir=-Math.cos(p*Math.PI);s.y=-12*Math.sin(p*Math.PI);s.pegel=STUFEN[r+1];break;
       default:
@@ -292,7 +338,7 @@ function zustand(t){
     s.haufen=.62+.38*clamp(ft/.7,0,1);
     if(ft>.25&&ft<1.45)huepfen(s,(ft-.25)/1.2,2,1);     // Freudensprünge
     s.funke=clamp(ft/.5,0,1)*clamp((FINALE-ft)/.8,0,1);
-    s.loef=Math.sin(ft*7)*7;
+    s.loef=LOEF_RUHE+Math.sin(ft*7)*9;s.armR=Math.sin(ft*7)*8;
   }else{                                                // Tasse wird geleert, dann von vorn
     var et=(t-(RUNDEN*RUNDE+FINALE))/LEEREN;
     s.text=RUNDEN;s.x=X0;
@@ -304,10 +350,10 @@ function zustand(t){
 }
 
 /* ---- Zeichnen --------------------------------------------------------------- */
-var KOERNER=[],ANZ=(SB.isMobile?10:20);
+var KOERNER=[],ANZ=(SB.isMobile?16:30);
 for(var ki=0;ki<ANZ;ki++){
   var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
-  c.setAttribute('class','zk-korn-zucker');c.setAttribute('r',[2,2.6,3.4,2.2,3][ki%5]);
+  c.setAttribute('class','zk-korn-zucker');c.setAttribute('r',[1.7,2.5,1.9,2.9,2.1,2.6,1.8][ki%7]);
   koernerBox.appendChild(c);KOERNER.push(c);
 }
 function f(v){return Math.round(v*100)/100;}
@@ -321,40 +367,39 @@ function zeichne(s){
      neu gezeichnet wurde. Ein halber Pixel pro Zeichnung reicht dafür. */
   if(szene)szene.setAttribute('transform','translate('+f(s.zitterX)+','+f(s.zitterY)+')');
   dose.setAttribute('transform','translate('+f(s.x)+','+f(BASE+s.y)+') rotate('+f(s.rot)+
-    ') rotate('+f(s.tilt)+',15,0) scale('+f(s.dir*s.sqx)+','+f(s.sqy)+')');
+    ') rotate('+f(s.tilt)+','+DREH_X+',0) scale('+f(s.dir*s.sqx)+','+f(s.sqy)+')');
   var hoch=clamp(-s.y/HUB,0,1);
   schatten.setAttribute('transform','translate('+f(s.x+s.tilt*.35)+','+BASE+') scale('+f(1-.28*hoch)+',1)');
   schatten.setAttribute('opacity',f(.95-.45*hoch));
-  loeffel.setAttribute('transform','rotate('+f(s.loef)+',10,-82)');
-  deckel.setAttribute('transform','rotate('+f(s.deck)+',-19,-80)');
+  deckel.setAttribute('transform','rotate('+f(s.deck)+','+LSCHULTER_X+','+SCHULTER_Y+')');
+  armR.setAttribute('transform','rotate('+f(s.armR)+','+SCHULTER_X+','+SCHULTER_Y+')');
+  var hand=drehPunkt(HAND_X,HAND_Y,s.armR,SCHULTER_X,SCHULTER_Y);
+  loeffel.setAttribute('transform','translate('+f(hand.x)+','+f(hand.y)+') rotate('+f(s.loef)+')');
   pegel.setAttribute('transform','translate(0,'+f(lerp(PEGEL_LEER,PEGEL_VOLL,s.pegel))+')');
   berg.setAttribute('transform','translate('+TASSE+','+RAND+') scale('+f(.55+.45*s.berg)+','+f(Math.max(s.berg,0))+')');
-  haufen.setAttribute('transform','translate(404,'+BASE+') scale('+f(Math.max(s.haufen,0))+')');
-  funken.setAttribute('opacity',f(s.funke));
+  haufen.setAttribute('transform','translate(556,'+BASE+') scale('+f(Math.max(s.haufen,0))+')');
+  funken.setAttribute('opacity',f(Math.max(s.funke,s.strahl*.5)));
   streu.setAttribute('opacity',f(clamp(s.pegel*1.3,0,1)*.9));
 
-  /* Der Strahl hängt an der Ausgusslippe der gekippten Dose und fällt im Bogen
-     in die Tasse; die Körner spritzen am Aufschlagpunkt weg. */
+  /* Zucker rieselt vom Löffelkopf in die Tasse: viele feine Körner auf
+     leicht gestreuten Bahnen, unten schneller — das liest sich als Rieseln,
+     nicht als gegossener Strang. */
   if(s.strahl>.01){
-    var lp=drehPunkt(LIPPE_X,LIPPE_Y,s.tilt,15,0),lx=s.x+lp.x,ly=BASE+s.y+lp.y;
-    var zx=TASSE-10,zy=RAND+3,mx=lx+(zx-lx)*.55;
-    strahl.setAttribute('opacity',f(s.strahl));
-    strahl.setAttribute('d','M'+f(lx-4)+','+f(ly-7)+
-      ' C'+f(mx)+','+f(ly+2)+' '+f(zx-20)+','+f(zy-20)+' '+f(zx-13)+','+f(zy)+
-      ' L'+f(zx+14)+','+f(zy)+
-      ' C'+f(zx+6)+','+f(zy-26)+' '+f(mx+7)+','+f(ly+13)+' '+f(lx+7)+','+f(ly+1)+' Z');
-    /* Spritzer: Fächer vom Aufschlagpunkt weg, mit Schwerkraft. */
+    var a=s.loef*Math.PI/180;
+    var hx=s.x+hand.x+Math.sin(a)*LAFFE,hy=BASE+s.y+hand.y-Math.cos(a)*LAFFE+3;
+    var zy=Math.min(lerp(PEGEL_LEER,PEGEL_VOLL,s.pegel),RAND+14);
     for(var i=0;i<KOERNER.length;i++){
-      var u=(s.giessP*2.4+i/KOERNER.length)%1;
-      var w=-2.75+(i/KOERNER.length)*3.1,weit=(12+(i%5)*7)*u*1.9;
-      var gx=zx-6+Math.cos(w)*weit,gy=zy-9+Math.sin(w)*weit+30*u*u;
+      var u=(s.giessP*1.75+i*0.137)%1;
+      var seit=((i*29)%17-8)*.85;
+      var gx=hx+3+seit*(.35+u)+(TASSE-hx)*u*.45;
+      var gy=hy+(zy-hy)*(.25*u+.75*u*u);
       KOERNER[i].setAttribute('transform','translate('+f(gx)+','+f(gy)+')');
-      KOERNER[i].setAttribute('opacity',f(s.strahl*(1-u*.85)));
+      KOERNER[i].setAttribute('opacity',f(s.strahl*clamp(u*8,0,1)*clamp((1-u)*6,0,1)));
     }
   }else{
-    strahl.setAttribute('opacity',0);
     for(var j=0;j<KOERNER.length;j++)KOERNER[j].setAttribute('opacity',0);
   }
+  loeffelzucker.setAttribute('opacity',f(s.zuckerLoef));
   if(s.text!==letzterText){letzterText=s.text;cap.textContent=TEXTE[s.text];}
 }
 

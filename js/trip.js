@@ -58,7 +58,7 @@ SB.trip={
      durchs Bild. teapot:null schaltet sie ab. */
   teapot:{
     color:'#8FD0EE',shade:'#5FAAD2',trim:'#2E6F97',
-    caption:'Die Kanne besteht darauf, mitzukommen.'
+    where:['loading']          // nur als Ladeanzeige — am Seitenende läuft die Zuckerdose
   },
 
   /* Zuckerdosen-Szene direkt vor dem RSVP: die Dose marschiert von links nach
@@ -66,8 +66,7 @@ SB.trip={
      Runde, die letzte gehört zum übervollen Finale (also immer eine mehr als
      Füll-Runden). zucker:null schaltet die Szene ab. */
   zucker:{
-    title:'Zum Schluss: der Zucker.',
-    sub:'Frühstück ist Chefsache — und die Zuckerdose erledigt das allein. Sie marschiert von links nach rechts und füllt deine Tasse. Löffel für Löffel, bis nichts mehr reinpasst.',
+    /* Ohne title/sub: die Szene steht für sich, nur die Zeile darunter spricht. */
     captions:['Erster Löffel. Zum Aufwärmen.',
               'Zweiter Gang. Sie meint es ernst.',
               'Langsam wird\'s süß.',

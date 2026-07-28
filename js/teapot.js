@@ -89,12 +89,39 @@ function mount(host,height,klass){
     frame();
     if(visible&&!SB.reduced&&!host.classList.contains('aus'))raf=requestAnimationFrame(loop);
   }
-  function start(){if(!raf&&!SB.reduced){last=null;raf=requestAnimationFrame(loop);}}
+  function start(){if(!raf&&!SB.reduced&&!entladen){last=null;raf=requestAnimationFrame(loop);}}
+
+  /* ---- Aufräumen ---------------------------------------------------------
+     Als Ladeanzeige hat die Kanne einen klar begrenzten Auftritt. Danach
+     bleibt sonst ein kompletter WebGL-Kontext samt Texturen im Speicher
+     stehen — neben dem der Karte, dem T-Shirt und (am Seitenende) dem
+     zweiten Kännchen. Browser geben nur eine Handvoll Kontexte her, deshalb
+     wird dieser hier ausdrücklich zurückgegeben.                           */
+  var entladen=false,beobachter=null;
+  function freigeben(){
+    if(entladen)return;
+    entladen=true;
+    if(raf)cancelAnimationFrame(raf);raf=null;
+    if(beobachter)beobachter.disconnect();
+    window.removeEventListener('resize',frame);
+    if(cv.parentNode)cv.parentNode.removeChild(cv);
+    try{var x=gl.getExtension('WEBGL_lose_context');x&&x.loseContext();}catch(e){}
+  }
+  if(window.MutationObserver&&host.id==='loading'){
+    var mo=new MutationObserver(function(){
+      if(!host.classList.contains('aus'))return;
+      mo.disconnect();
+      setTimeout(freigeben,900);        // erst ausblenden lassen (CSS 0,6 s)
+    });
+    mo.observe(host,{attributes:true,attributeFilter:['class']});
+  }
+
   frame();
   if(window.IntersectionObserver){
-    new IntersectionObserver(function(es){
+    beobachter=new IntersectionObserver(function(es){
       visible=es[0].isIntersecting;if(visible)start();
-    },{rootMargin:'60px'}).observe(cv);
+    },{rootMargin:'60px'});
+    beobachter.observe(cv);
   }else start();
   window.addEventListener('resize',frame,{passive:true});
   return cv;

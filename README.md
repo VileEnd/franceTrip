@@ -268,15 +268,18 @@ und bei `prefers-reduced-motion` bleibt sie stehen.
 
 `js/zucker.js` hängt ganz ans Ende von `#content` — also direkt vor das
 RSVP — eine gezeichnete Szene: eine Zuckerdose marschiert von links nach
-rechts zur Teetasse, klappt den Deckel auf, kippt und schüttet Zucker nach.
-Vier Runden lang, die Tasse wird jedes Mal voller, zum Schluss quillt sie
-über. Unter der Bühne steht je Runde eine Zeile aus `captions`, ein Tipp auf
-die Szene startet sie neu.
+rechts zur Teetasse. Sie hat zwei Arme; der linke hebt den Deckel hoch, der
+rechte schwenkt den Löffel über die Tasse und kippt ihn aus, worauf feiner
+Zucker in die Tasse rieselt. Vier Runden lang, die Tasse wird jedes Mal
+voller, zum Schluss quillt sie über. Unter der Bühne steht je Runde eine
+Zeile aus `captions`, ein Tipp auf die Szene startet sie neu.
 
 Gezeichnet ist alles als Trickfilm-Cel: gemalter, stillstehender
 Hintergrund, darüber flache Farbflächen mit Tuschekontur, dazu Vignette und
-Filmkorn. Bewegt wird mit 12 Zeichnungen je Sekunde („auf Zweien"), nicht
-mit CSS-Keyframes — `zustand(t)` beschreibt die Szene für jeden Zeitpunkt.
+Filmkorn. Ein Rausch-Filter verschiebt die Kanten minimal, damit die Linien
+nach Hand und nicht nach Kurvenlineal aussehen — auf Handys bleibt er aus.
+Bewegt wird mit 12 Zeichnungen je Sekunde („auf Zweien"), nicht mit
+CSS-Keyframes: `zustand(t)` beschreibt die Szene für jeden Zeitpunkt.
 Deshalb sind Standbild bei `prefers-reduced-motion`, Neustart per Klick und
 das Pausieren außerhalb des Bildschirms derselbe Codepfad.
 
@@ -331,9 +334,33 @@ Zwei Einstellungen im Repository, falls der erste Lauf hakt:
   ungleichmäßiger Bildabstand. Zusätzlich gedrosselt: die zurückgelegte
   Strecke (GeoJSON-Quelle, alle 120 ms statt jedes Bild) und die
   Story-Karten (nur die sichtbare wird angefasst).
+- **Startweg:** `maplibre-gl.js` ist das größte Paket der Seite und stand
+  früher als blockierendes `<script>` im Body — die ganze Seite wartete darauf.
+  Jetzt steht im `<head>` nur ein `<link rel="preload">` (der Download läuft
+  also weiter sofort an), eingehängt wird die Bibliothek erst von `js/map.js`.
+  Schriften und Karten-CSS kommen aus demselben Grund als `media="print"`, das
+  beim `onload` auf `all` umgeschaltet wird: Text steht, bevor irgendein CDN
+  geantwortet hat.
+- **Kacheln auf Vorrat** (`js/map.js`): Startpunkt und Zoom stehen im Trip,
+  die Kachel-Adressen lassen sich also ausrechnen, *bevor* MapLibre da ist.
+  Beim Seitenaufruf holt die Engine deshalb schon den ersten Bildausschnitt in
+  den Browser-Cache, und während der Fahrt immer ~5 % Strecke im Voraus,
+  zwei Kacheln links und rechts der Linie. Es sind exakt dieselben Adressen,
+  die MapLibre gleich darauf anfordert (gleiche Host-Verteilung `(x+y) % 3`,
+  gleiche Zoomstufe `round(zoom + 1)` für 256er-Kacheln) — also **kein**
+  zusätzlicher Traffic, nur früher. Der Vorrat pausiert, solange die Karte am
+  aktuellen Bild lädt, und bleibt bei „Datensparen“/2G ganz aus.
+- **`@2x`-Kacheln** nur auf Bildschirmen, die sie auflösen können
+  (`devicePixelRatio > 1.2`): auf einem 1×-Monitor sind sie die vierfache
+  Datenmenge fürs identische Bild.
 - **Performance auf Phones:** kein 3D-Gelände, keine `backdrop-filter`-Blurs,
   einfache Tiles, flachere Kamera, gröber tesselliertes Fahrzeug — gesteuert
   über `SB.isMobile`/`SB.lowPower` in `core.js`.
+- **Nichts zeichnen, was niemand sieht:** immer nur die aktuelle Story-Karte
+  ist `visible` (die anderen neun bekämen sonst je eine Compositing-Ebene mit
+  Blur), schwebende Emojis pausieren außerhalb des Bildes, die Ladeanzeige
+  verschwindet samt WebGL-Kontext der Teekanne, und der YouTube-Player lädt
+  erst in einer Leerlaufpause statt beim ersten Scroll.
 - **3D-Gelände** kostet pro Bild einen kompletten zusätzlichen Renderdurchgang
   und ist deshalb standardmäßig **aus**. Wer die Berge sehen will: `map.terrain:true`.
 - **`prefers-reduced-motion`** wird respektiert: keine Animationen, kein

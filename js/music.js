@@ -69,9 +69,18 @@ window.onYouTubeIframeAPIReady=function(){
       }
     }});
 };
-/* Player so früh wie möglich laden, damit er beim Dialog schon bereitsteht. */
+/* Player früh laden, damit er beim Dialog bereitsteht — aber nicht MITTEN im
+   Start. Das YouTube-Skript zieht einen kompletten Player samt iFrame nach
+   und ist damit das größte Paket der Seite; die erste Geste ist meistens der
+   erste Scroll, also genau der Moment, in dem die Karte ihre Kacheln holt und
+   der Zug anfährt. Deshalb erst in einer Leerlaufpause danach (spätestens
+   nach dem Timeout), und am Meilenstein notfalls sofort.                   */
+function ladePlanen(){
+  if(window.requestIdleCallback)requestIdleCallback(loadAPI,{timeout:6000});
+  else setTimeout(loadAPI,2500);
+}
 ['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
-  window.addEventListener(ev,loadAPI,{passive:true,once:true});
+  window.addEventListener(ev,ladePlanen,{passive:true,once:true});
 });
 
 function setUI(){
@@ -164,6 +173,7 @@ SB.music={
   onScene:function(si){
     if(hit||si<M.triggerScene)return;
     hit=true;
+    loadAPI();                        // ab hier kann jederzeit geklickt werden
     if(musicbtn)musicbtn.style.display='inline-flex';
     if(openGate)openGate();
     else if(SB.showToast)SB.showToast(M.hint||('♪ '+(M.label||'Musik')+' — oben antippen.'));
