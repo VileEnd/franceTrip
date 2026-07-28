@@ -106,7 +106,10 @@ function resumeWithFadeIn(){
    der ♪-Knopf plus ein kurzer Hinweis, und der Ton startet erst, wenn man
    ihn drückt. Ohne echte Geste lässt kein Browser Ton zu, das bleibt so —
    ohne Dialog wird das Anschalten also freiwillig statt vorgelegt.          */
-var G=M.gate,openGate=null;
+/* Nur ein AUSDRÜCKLICHES gate:false schaltet den Dialog ab — ein Trip, der
+   das Feld einfach weglässt, bekommt weiter den alten Standard (Dialog mit
+   Standardtexten). So bricht die Änderung keine bestehenden Trips.        */
+var G=(M.gate===undefined)?{}:M.gate,openGate=null;
 if(G){
   var gate=document.createElement('div');
   gate.id='francegate';
@@ -167,11 +170,15 @@ SB.music={
   }
 };
 
-/* Der ♪-Button dient nach dem Dialog nur noch als Pause/Weiter-Schalter. */
+/* Der ♪-Button: mit Dialog nur Pause/Weiter — ohne Dialog (gate:false) ist
+   er der EINZIGE Startweg. Deshalb über startWithFadeIn(): das merkt sich
+   den Wunsch (pendingPlay), falls der Player noch lädt, und spielt dann
+   von selbst los, statt den Klick zu verschlucken.                        */
 if(musicbtn){
   musicbtn.addEventListener('click',function(){
-    if(!ytReady&&!playing){SB.showToast('♪ Musik lädt …');return;}
-    if(playing)pause();else resumeWithFadeIn();
+    if(playing){pause();return;}
+    if(!ytReady&&SB.showToast)SB.showToast('♪ Musik lädt …');
+    startWithFadeIn();
   });
 }
 })();
