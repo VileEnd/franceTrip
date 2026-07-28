@@ -99,8 +99,10 @@ SB.trip = {
     ytId:'…',                          // YouTube-Video-ID
     label:'La vie en rose — Zaz',      // ♪-Button-Tooltip
     volume: 65,
-    triggerScene: 3,                   // ab dieser Szene erscheint der Dialog
-    gate: { flag:'🇫🇷', title:'…', text:'…', go:'Musik an & weiter ▶', skip:'Ohne Musik weiter' }
+    triggerScene: 3,                   // ab dieser Szene erscheint der ♪-Knopf
+    gate: false,                       // false = ohne Dialog (Fahrt läuft weiter)
+    hint: '🇫🇷 … ♪ oben antippen.',     // Hinweis statt Dialog
+    // gate:{flag,title,text,go,skip}  = Dialog, hält Autopilot & Scrollen an
   },
 
   scenes: [{
@@ -170,10 +172,19 @@ lautlos auf `trainEmoji` zurück; `vehicle3d:false` erzwingt das Emoji.
 
 **Der ICE ist ein ganzer Zug.** `model:'ice'` fährt als Triebzug aus
 `cars` Wagen: Kopfwagen, Mittelwagen (die tragen die Stromabnehmer) und
-zum Schluss derselbe Kopfwagen um 180° gedreht. Unter jedem Wagen liegt ein
-Gleisstück, sodass der Zug auf durchgehenden Schienen fährt (`track:false`
-nimmt sie weg). `size` ist dabei die Länge **eines Wagens** in Pixeln — der
-ganze Zug ist entsprechend `cars` mal so lang.
+zum Schluss derselbe Kopfwagen um 180° gedreht. `size` ist dabei die Länge
+**eines Wagens** in Pixeln — der ganze Zug ist entsprechend `cars` mal so
+lang.
+
+**Das Gleis liegt auf der ganzen Strecke**, nicht nur unter dem Zug — aber
+in zwei Ausführungen. Über die Route hinweg als vier Linien-Layer
+(Schotterbett, Schwellenschraffur, zwei versetzte Schienen); das rechnet
+die GPU beim Linienzeichnen praktisch umsonst, während tausende Schwellen
+als Körper sinnlos teuer wären. Unter jedem Wagen liegt zusätzlich ein
+plastisches Gleisstück. Beide teilen sich die Maße in `SB.mesh.GAUGE`
+(halbe Breiten in Modelllängen), damit das gezeichnete Gleis nahtlos ins
+plastische übergeht und die Räder wirklich auf den Schienen laufen.
+`track:false` nimmt beides weg.
 
 Jeder Wagen wird **einzeln** auf die Route gesetzt, um genau seinen Abstand
 zur Zugspitze zurückversetzt. Dafür misst `js/map.js` die Route einmal in
@@ -186,6 +197,15 @@ Segment-Tangens würde an jedem Routenpunkt umspringen.
 Beschriftung (`wordmark`, `logo`) wird in ein kleines Canvas gezeichnet und
 als Textur auf die Flanken des Kopfwagens gelegt — derselbe Weg wie beim
 Brustdruck des T-Shirts. `false` lässt sie weg.
+
+**Warum die Modelle gerechnet und nicht geladen werden.** Ein fertiger
+Wagen sind rund 5 000 Dreiecke, also gut 600 kB rohe Eckdaten — als Datei
+ausgeliefert wäre das ein Vielfaches der Zeit, die das Rechnen kostet
+(zusammen etwa 60 ms, einmalig). Dazu käme ein Build-Schritt, den dieses
+Projekt bewusst nicht hat. Gerechnet wird deshalb im Browser, aber **nur
+einmal**: jedes Netz landet nach dem ersten Bauen in seinem GPU-Puffer und
+bleibt dort. Ein Modellwechsel beim Antippen sortiert danach nur noch die
+Teileliste um und kostet gar nichts mehr.
 
 | `model` | Form |
 |---------|------|

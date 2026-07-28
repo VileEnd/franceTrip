@@ -45,6 +45,12 @@ function seg(n){return Math.max(4,Math.round(n*DET));}
    die Zahlen sind die x-Anteile im Bild.                                  */
 var BRAND={word:[0,0.62],logo:[0.66,1]};
 
+/* Gleismaße als halbe Breiten in Modelllängen. Daran hängen drei Dinge, die
+   zusammenpassen müssen: die Räder, das 3D-Gleisstück unter dem Zug und die
+   gezeichneten Schienen entlang der ganzen Route (js/map.js rechnet sie
+   damit in Pixel um). Deshalb stehen sie hier an einer Stelle.            */
+var GAUGE={rail:0.078,railw:0.011,tie:0.100,bed:0.114,tiePitch:0.070};
+
 /* ---- Parametrische Fläche ------------------------------------------------
    P(u,v) liefert einen Punkt, die Normale kommt aus den Ableitungen —
    deshalb sind alle Rundungen weich schattiert. col(u,v,pos,n) färbt jeden
@@ -359,12 +365,15 @@ function ice(out,C,opt){
         2,seg(12),function(u){return u>0.55?metal:deep;},{flip:!e});
     });
   }
-  box(out,-0.42,0.42,-0.072,0.072,0.034,0.076,deep);
+  box(out,-0.42,0.42,-0.062,0.062,0.034,0.076,deep);
   [-0.30,0.30].forEach(function(x){
-    box(out,x-0.078,x+0.078,-0.098,0.098,0.020,0.072,dark);
+    // Rahmen schmaler als die Spurweite, sonst verdeckt er die Räder.
+    box(out,x-0.078,x+0.078,-0.064,0.064,0.020,0.072,dark);
+    // Räder laufen auf der Spurweite aus GAUGE — sonst schweben sie neben
+    // den Schienen, die entlang der Route gezeichnet werden.
     [1,-1].forEach(function(s){
-      wheel(x-0.048,s*0.100,0.036,0.020);
-      wheel(x+0.048,s*0.100,0.036,0.020);
+      wheel(x-0.048,s*GAUGE.rail,0.036,0.020);
+      wheel(x+0.048,s*GAUGE.rail,0.036,0.020);
     });
   });
 
@@ -395,12 +404,12 @@ function ice(out,C,opt){
 function iceTrack(out,C,len){
   var rail=hexRGB(C.rail,'#9AA0A6'),tie=hexRGB(C.tie,'#544941'),
       bed=hexRGB(C.ballast,'#918B82');
-  var L=len/2;
-  box(out,-L,L,-0.146,0.146,-0.020,-0.014,bed);
-  for(var x=-L+0.032;x<L-0.01;x+=0.070)
-    box(out,x-0.017,x+0.017,-0.126,0.126,-0.014,-0.006,tie);
+  var L=len/2,G=GAUGE;
+  box(out,-L,L,-G.bed,G.bed,-0.020,-0.014,bed);
+  for(var x=-L+G.tiePitch/2;x<L-0.01;x+=G.tiePitch)
+    box(out,x-G.tiePitch*0.24,x+G.tiePitch*0.24,-G.tie,G.tie,-0.014,-0.006,tie);
   [1,-1].forEach(function(s){
-    box(out,-L,L,s*0.100-0.011,s*0.100+0.011,-0.007,0.004,rail);
+    box(out,-L,L,s*G.rail-G.railw,s*G.rail+G.railw,-0.007,0.004,rail);
   });
 }
 
@@ -684,7 +693,7 @@ function chainPivot(base,pivot,rot){
 
 SB.mesh={hexRGB:hexRGB,surface:surface,revolve:revolve,sweep:sweep,ring:ring,
          box:box,ball:ball,curve:curve,croissant:croissant,ice:ice,
-         iceTrain:iceTrain,track:trackPiece,BRAND:BRAND,
+         iceTrain:iceTrain,track:trackPiece,BRAND:BRAND,GAUGE:GAUGE,
          vehicle:vehicle,tee:tee,teapot:teapot,
          program:program,draw:draw,mul:mul,mat:mat,chainPivot:chainPivot,
          STRIDE:STRIDE,FLOATS:11};

@@ -225,25 +225,32 @@ function makeVehicleLayer(map){
     m.count=data.length/MESH.FLOATS;
     return m;
   }
-  /* Aufstellung bauen. Beim Antippen wird nur das Wagen-Netz getauscht —
-     Gleis, Shader und Beschriftung bleiben stehen. `at` ist der Abstand
-     zur Zugspitze in Modelllängen.                                        */
+  /* Aufstellung bauen. Jedes Netz wird höchstens EINMAL gerechnet und
+     hochgeladen — danach kostet ein Modellwechsel nur noch das Umsortieren
+     der Liste, kein Neubauen. Deshalb ist das Antippen ab dem zweiten Mal
+     umsonst. `at` ist der Abstand zur Zugspitze in Modelllängen.         */
+  function need(gl,name,make){
+    if(!bufs[name])upload(gl,name,make());
+  }
   function build(gl){
     var C=meshCfg(),i;
     parts=[];
     if(RAILS){
-      if(!bufs.track)upload(gl,'track',MESH.track(C,PITCH+0.03));
+      need(gl,'track',function(){return MESH.track(C,PITCH+0.03);});
       for(i=0;i<CARS;i++)parts.push({n:'track',at:i*PITCH,turn:false});
     }
     if(currentKind==='ice'&&CARS>1){
-      var t=MESH.iceTrain(C);
-      upload(gl,'head',t.head);upload(gl,'mid',t.mid);
+      if(!bufs.head||!bufs.mid){
+        var t=MESH.iceTrain(C);
+        upload(gl,'head',t.head);upload(gl,'mid',t.mid);
+      }
       parts.push({n:'head',at:0,turn:false});
       for(i=1;i<CARS-1;i++)parts.push({n:'mid',at:i*PITCH,turn:false});
       parts.push({n:'head',at:(CARS-1)*PITCH,turn:true});
     }else{
-      upload(gl,'single',MESH.vehicle(currentKind,C));
-      for(i=0;i<CARS;i++)parts.push({n:'single',at:i*PITCH,turn:false});
+      var one=currentKind;
+      need(gl,one,function(){return MESH.vehicle(one,C);});
+      for(i=0;i<CARS;i++)parts.push({n:one,at:i*PITCH,turn:false});
     }
   }
   return {
@@ -381,10 +388,38 @@ function boot(){
       tileSize:256,maxzoom:11});
       map.setTerrain({source:'dem',exaggeration:1.5});}catch(e){}}
     map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:R}}});
-    map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
-    map.addLayer({id:'route',type:'line',source:'route',paint:{'line-color':COLORS.route,'line-width':4,'line-dasharray':[2,1.4]}});
+    /* ---- Gleis über die ganze Strecke ---------------------------------
+       Nicht als 3D-Körper (das wären tausende Schwellen), sondern als vier
+       Linien: Schotterbett, Schwellenschraffur (kurze Striche über die
+       Breite) und zwei versetzte Schienen. Die Breiten kommen aus denselben
+       Maßen wie das 3D-Gleisstück unter dem Zug (SB.mesh.GAUGE × Pixel je
+       Modelllänge) — dadurch geht das gezeichnete Gleis nahtlos in das
+       plastische unter dem Zug über.                                     */
+    if(RAILS){
+      var G=MESH.GAUGE,px=vehicle.size;
+      map.addLayer({id:'rail-bed',type:'line',source:'route',
+        layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':V.ballast||'#918B82','line-width':2*G.bed*px,'line-opacity':.92}});
+      map.addLayer({id:'rail-ties',type:'line',source:'route',
+        paint:{'line-color':V.tie||'#544941','line-width':2*G.tie*px,'line-opacity':.6,
+               'line-dasharray':[0.24,0.34]}});
+      [-1,1].forEach(function(s){
+        map.addLayer({id:'rail'+(s<0?'-l':'-r'),type:'line',source:'route',
+          layout:{'line-cap':'round','line-join':'round'},
+          paint:{'line-color':V.rail||'#9AA0A6',
+                 'line-width':Math.max(1.2,2*G.railw*px),'line-offset':s*G.rail*px}});
+      });
+    }else{
+      map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
+    }
+    // Die Route selbst bleibt der rote Faden — auf dem Gleis dünner, damit
+    // Schwellen und Schienen darunter sichtbar bleiben.
+    map.addLayer({id:'route',type:'line',source:'route',
+      paint:{'line-color':COLORS.route,'line-width':RAILS?2.4:4,
+             'line-dasharray':[2,1.4],'line-opacity':RAILS?.85:1}});
     map.addSource('done',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[R[0],R[0]]}}});
-    map.addLayer({id:'done',type:'line',source:'done',paint:{'line-color':COLORS.done,'line-width':5}});
+    map.addLayer({id:'done',type:'line',source:'done',
+      paint:{'line-color':COLORS.done,'line-width':RAILS?3.4:5}});
     map.addSource('stops',{type:'geojson',data:{type:'FeatureCollection',features:route.STOP_PTS.map(function(p){return {type:'Feature',geometry:{type:'Point',coordinates:p}}})}});
     map.addLayer({id:'stops-o',type:'circle',source:'stops',paint:{'circle-radius':8,'circle-color':COLORS.stop}});
     map.addLayer({id:'stops-i',type:'circle',source:'stops',paint:{'circle-radius':4,'circle-color':'#fff'}});

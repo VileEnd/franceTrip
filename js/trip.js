@@ -17,8 +17,8 @@ SB.trip={
 
   config:{
     email:'frankreich.0wl0i@passmail.net',
-    sceneVh:260,           // Scrollhöhe pro Szene (vh) — mehr = gemächlicher
-    autoSecPerScene:12,    // Autopilot: Sekunden pro Szene
+    sceneVh:320,           // Scrollhöhe pro Szene (vh) — mehr = gemächlicher
+    autoSecPerScene:20,    // Autopilot: Sekunden pro Szene
     tickerLabel:'Fahrtkosten p. P.'
   },
 
@@ -74,19 +74,17 @@ SB.trip={
   },
 
   /* Musik am Meilenstein. Weglassen (music:null) = Trip ohne Musik.
-     triggerScene: ab dieser Szene erscheint der Dialog. */
+     triggerScene: ab dieser Szene erscheint der ♪-Knopf.
+     gate:false = ohne Dialog, damit die Fahrt an der Grenze nicht stehen
+     bleibt; stattdessen nur der Hinweis unten. Ton startet dann per Klick
+     auf ♪ (ohne echte Geste lässt kein Browser Ton zu). */
   music:{
     ytId:'6A_lOwSnS8c',          // Zaz — „La vie en rose"
     label:'La vie en rose — Zaz',
     volume:65,
     triggerScene:3,              // Szene „Über den Rhein: Straßburg"
-    gate:{
-      flag:'🇫🇷',
-      title:'Wir überqueren den Rhein.',
-      text:'Ab hier läuft „La vie en rose" — passend zur Grenze. Langsam eingeblendet, versprochen.',
-      go:'Musik an &amp; weiter ▶',
-      skip:'Ohne Musik weiter'
-    }
+    gate:false,
+    hint:'🇫🇷 Rhein überquert — ♪ oben antippen für „La vie en rose".'
   },
 
   /* Szenen der Kartenfahrt.
