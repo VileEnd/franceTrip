@@ -157,36 +157,38 @@ var SVG=[
   '        <!-- Die Zuckerdose: Schatten bleibt auf dem Tisch, die Dose hüpft -->',
   '        <ellipse id="zk-schatten" class="zk-schlagschatten" cx="0" cy="0" rx="32" ry="7" transform="translate(62,196)"/>',
   '        <g id="zk-dose" transform="translate(62,196)">',
+  '          <!-- Löffel liegt HINTER der Dose: beim Schöpfen verschwindet die',
+  '               Laffe dadurch im Topf, beim Ausschütten steht sie frei. -->',
+  '          <g id="zk-loeffel" transform="translate(42,-62) rotate(28)">',
+  '            <path class="zk-stiel-um" d="M0,15 L0,-24"/>',
+  '            <path class="zk-stiel" d="M0,15 L0,-24"/>',
+  '            <path class="zk-loeffelkopf" d="M0,-37 C7,-33 7.5,-20 0,-15 C-7.5,-20 -7,-33 0,-37 Z"/>',
+  '            <path class="zk-loeffelglanz" d="M-2,-31 C1.5,-29 2,-24 0,-21"/>',
+  '            <path id="zk-loeffelzucker" class="zk-fuellung" opacity="0" d="M-5,-25 C-4,-31 -1,-34 0,-34 C1,-34 4,-31 5,-25 C3,-23 -3,-23 -5,-25 Z"/>',
+  '          </g>',
   '          <!-- Urnenform: breiter Bauch, eingezogene Taille, ausgestellter Kragen -->',
   '          <path class="zk-keramik" d="M-13,-7 C-30,-11 -40,-18 -40,-27 C-40,-38 -29,-43 -22,-47 L22,-47 C29,-43 40,-38 40,-27 C40,-18 30,-11 13,-7 Z"/>',
   '          <g clip-path="url(#zkDoseForm)">',
   '            <path class="zk-ton" d="M16,-47 C31,-41 41,-33 40,-23 C39,-13 29,-7 14,-5 L-8,-5 C14,-11 26,-24 24,-38 Z"/>',
   '          </g>',
-  '          <!-- Henkelschnecke auf dem Bauch -->',
   '          <path class="zk-locke" d="M-25,-33 C-34,-31 -35,-18 -26,-16 C-20,-15 -18,-19 -19,-23"/>',
-  '          <!-- Kragen -->',
   '          <path class="zk-keramik" d="M-22,-47 L-31,-58 L31,-58 L22,-47 Z"/>',
   '          <ellipse class="zk-innen" cx="0" cy="-58" rx="31" ry="6.5"/>',
-  '          <!-- Fuß -->',
-  '          <path class="zk-keramik" d="M-13,-8 L13,-8 L18,0 C18,2.5 -18,2.5 -18,0 Z"/>',
-  '          <!-- Linker Arm hält den Deckel: schwingt ihn beim Schöpfen hoch -->',
+  '          <!-- Linker Arm: greift den Knauf des Deckels und hebt ihn hoch -->',
   '          <g id="zk-deckel" transform="rotate(0,-32,-40)">',
-  '            <path class="zk-arm-um" d="M-32,-40 C-38,-50 -30,-58 -20,-62"/>',
-  '            <path class="zk-arm" d="M-32,-40 C-38,-50 -30,-58 -20,-62"/>',
-  '            <path class="zk-keramik" d="M-28,-64 C-18,-71 14,-71 24,-64 C14,-57 -18,-57 -28,-64 Z"/>',
-  '            <circle class="zk-hand" cx="-20" cy="-62" r="4.5"/>',
+  '            <path class="zk-arm-um" d="M-32,-40 C-41,-52 -26,-64 -9,-69"/>',
+  '            <path class="zk-arm" d="M-32,-40 C-41,-52 -26,-64 -9,-69"/>',
+  '            <path class="zk-keramik" d="M-28,-62 C-18,-69 14,-69 24,-62 C14,-55 -18,-55 -28,-62 Z"/>',
+  '            <path class="zk-keramik" d="M-13,-65 C-13,-71 -3,-71 -3,-65 Z"/>',
+  '            <circle class="zk-hand" cx="-8" cy="-69" r="4.5"/>',
   '          </g>',
-  '          <!-- Rechter Arm hält den Löffel: schwenkt ihn über die Tasse und kippt -->',
-  '          <g id="zk-loeffel" transform="rotate(0,30,-40)">',
-  '            <path class="zk-arm-um" d="M30,-40 C38,-50 38,-57 42,-62"/>',
-  '            <path class="zk-arm" d="M30,-40 C38,-50 38,-57 42,-62"/>',
-  '            <path class="zk-stiel-um" d="M40,-60 L54,-90"/>',
-  '            <path class="zk-stiel" d="M40,-60 L54,-90"/>',
-  '            <path class="zk-loeffelkopf" d="M0,-11 C7,-7 7.5,6 0,11 C-7.5,6 -7,-7 0,-11 Z" transform="translate(57,-96) rotate(28)"/>',
-  '            <path class="zk-loeffelglanz" d="M-2,-5 C1.5,-3 2,2 0,5" transform="translate(57,-96) rotate(28)"/>',
-  '            <path id="zk-loeffelzucker" class="zk-fuellung" opacity="0" d="M-5,1 C-4,-5 -1,-8 0,-8 C1,-8 4,-5 5,1 C3,3 -3,3 -5,1 Z" transform="translate(57,-96) rotate(28)"/>',
+  '          <!-- Rechter Arm: die Hand hält den Löffel (der Löffel folgt ihr) -->',
+  '          <g id="zk-arm-r" transform="rotate(0,30,-40)">',
+  '            <path class="zk-arm-um" d="M30,-40 C39,-50 39,-57 42,-62"/>',
+  '            <path class="zk-arm" d="M30,-40 C39,-50 39,-57 42,-62"/>',
   '            <circle class="zk-hand" cx="42" cy="-62" r="4.5"/>',
   '          </g>',
+  '          <path class="zk-keramik" d="M-13,-8 L13,-8 L18,0 C18,2.5 -18,2.5 -18,0 Z"/>',
   '        </g>',
   '      </g>',
   '',
@@ -213,6 +215,7 @@ var szene=document.getElementById('zk-szene');
 if(szene&&!SB.isMobile)szene.setAttribute('filter','url(#zkSkizze)');
 var dose=document.getElementById('zk-dose'),schatten=document.getElementById('zk-schatten'),
     loeffel=document.getElementById('zk-loeffel'),deckel=document.getElementById('zk-deckel'),
+    armR=document.getElementById('zk-arm-r'),
     pegel=document.getElementById('zk-pegel'),berg=document.getElementById('zk-berg'),
     haufen=document.getElementById('zk-haufen'),
     koernerBox=document.getElementById('zk-koerner'),funken=document.getElementById('zk-funken'),
@@ -223,14 +226,17 @@ var dose=document.getElementById('zk-dose'),schatten=document.getElementById('zk
 /* ---- Bühnenmaße (alles in viewBox-Einheiten) -------------------------------- */
 var BASE=196,          // Tischkante: darauf steht alles
     X0=62,             // Startplatz links
-    X1=386,            // Schöpfplatz dicht neben der Tasse
+    X1=392,            // Schöpfplatz dicht neben der Tasse
     TASSE=470,RAND=144,// Tassenmitte & Tassenrand
     PEGEL_LEER=202,PEGEL_VOLL=144,
-    SCHWENK=26,        // so weit schwenkt der Löffel über die Tasse
-    KIPPLOEFFEL=16,    // …und kippt dann aus
-    DECKEL_AUF=70,     // so weit hebt der linke Arm den Deckel hoch
-    LOEF_X=30,LOEF_Y=-40,     // rechte Schulter
-    KOPF_X=57,KOPF_Y=-96,     // Laffe in Ruhelage
+    DECKEL_AUF=70,     // so weit hebt der linke Arm den Deckel am Knauf hoch
+    SCHULTER_X=30,SCHULTER_Y=-40,   // rechte Schulter (Löffelarm)
+    LSCHULTER_X=-32,                // linke Schulter (Deckelarm)
+    HAND_X=42,HAND_Y=-62,           // Hand in Ruhelage (sie hält den Löffel)
+    LAFFE=26,          // Abstand Griff → Laffe
+    ARM_TAUCH=-75,     // Arm schwenkt den Löffel in die Dose
+    ARM_TASSE=-5,      // …und dann über die Tasse
+    LOEF_RUHE=28,LOEF_TAUCH=182,LOEF_TRAGEN=10,LOEF_KIPP=85,
     DREH_X=15,         // Kippkante: rechter Fußrand
     HUB=15,            // Hüpfhöhe
     HUEPFER=5,         // Hüpfer pro Weg
@@ -241,8 +247,8 @@ var STUFEN=[0,.30,.55,.79,1];
 var TEXTE=(Z.captions&&Z.captions.length===STUFEN.length)?Z.captions:STANDARDTEXTE;
 
 /* ---- Zeitplan einer Runde (Sekunden) ---------------------------------------- */
-var PHASEN=[['hin',1.25],['ansatz',.22],['kipp',.3],['giess',.8],['auf',.3],
-            ['dreh',.18],['rueck',1.15],['dreh2',.18],['ruhe',.2]];
+var PHASEN=[['hin',1.15],['ansatz',.2],['deckel',.3],['tauchen',.45],['heben',.4],
+            ['giess',.8],['zurueck',.45],['dreh',.18],['rueck',1.05],['dreh2',.18],['ruhe',.2]];
 var RUNDE=0;for(var pi=0;pi<PHASEN.length;pi++)RUNDE+=PHASEN[pi][1];
 var RUNDEN=STUFEN.length-1,FINALE=4.2,LEEREN=1;
 var ZYKLUS=RUNDEN*RUNDE+FINALE+LEEREN;
@@ -262,6 +268,7 @@ function phase(lt){
 /* Hüpfen: Sinusbogen + Squash bei der Landung, Stretch im Scheitel. */
 function huepfen(s,p,n,dir){
   var w=p*n*Math.PI,h=Math.abs(Math.sin(w));
+  s.gang=w;
   var land=Math.pow(1-h,6);
   s.y=-HUB*h;
   s.rot=Math.cos(w)*7*dir;          // beim Abstoßen nach vorn, bei der Landung zurück
@@ -269,40 +276,54 @@ function huepfen(s,p,n,dir){
   s.sqy=1-.16*land+.08*h*h*h;
 }
 
+/* Beim Marschieren schlenkern beide Arme gegenläufig mit — sonst sieht der
+   Gang geschoben aus statt gelaufen. */
+function gangArme(s){
+  s.armR=Math.sin(s.gang)*10;
+  s.deck=-Math.sin(s.gang)*7;
+  s.loef=LOEF_RUHE+Math.sin(s.gang+1)*6;
+}
+
 /* ---- Zeitleiste: die ganze Szene als Funktion von t ------------------------- */
 function zustand(t){
   var s={x:X0,y:0,rot:0,tilt:0,dir:1,sqx:1,sqy:1,loef:0,deck:0,
-         pegel:0,berg:0,haufen:0,strahl:0,giessP:0,funke:0,zuckerLoef:0,text:0,zitterX:0,zitterY:0};
+         armR:0,gang:0,pegel:0,berg:0,haufen:0,strahl:0,giessP:0,funke:0,zuckerLoef:0,text:0,zitterX:0,zitterY:0};
   var bild=Math.round(t/TAKT);                  // laufende Nummer der Zeichnung
   s.zitterX=(bild*7%3-1)*.45;s.zitterY=(bild*11%3-1)*.4;
   if(t<RUNDEN*RUNDE){
     var r=Math.floor(t/RUNDE),lt=t-r*RUNDE,ph=phase(lt),p=ph.p,e;
-    s.text=r;s.pegel=STUFEN[r];
+    s.text=r;s.pegel=STUFEN[r];s.loef=LOEF_RUHE;
     switch(ph.n){
       case 'hin':
-        s.x=lerp(X0,X1,weich(p));huepfen(s,p,HUEPFER,1);
-        s.loef=Math.sin(p*HUEPFER*2*Math.PI)*11;break;
-      case 'ansatz':                                  // kurz sammeln, Deckel wackelt
-        s.x=X1;s.rot=-5*Math.sin(p*Math.PI);s.deck=-10*p;break;
-      case 'kipp':                                    // Deckel auf, Löffel schwenkt rüber
-        e=weich(p);s.x=X1;s.tilt=3*e;s.deck=-10-DECKEL_AUF*e;
-        s.loef=SCHWENK*e;s.zuckerLoef=clamp(p*3,0,1);break;
-      case 'giess':                                   // Löffel kippt, Zucker rieselt
-        e=weich(clamp(p*2.2,0,1));
-        s.x=X1;s.tilt=3;s.deck=-10-DECKEL_AUF;
-        s.loef=SCHWENK+KIPPLOEFFEL*e+Math.sin(p*Math.PI*7)*1.5;
+        s.x=lerp(X0,X1,weich(p));huepfen(s,p,HUEPFER,1);gangArme(s);break;
+      case 'ansatz':                                  // stehenbleiben, durchatmen
+        s.x=X1;s.rot=-5*Math.sin(p*Math.PI);break;
+      case 'deckel':                                  // linker Arm hebt den Deckel
+        s.x=X1;s.deck=-DECKEL_AUF*weich(p);break;
+      case 'tauchen':                                 // Löffel in die Dose, schöpfen
+        e=weich(p);s.x=X1;s.deck=-DECKEL_AUF;
+        s.armR=ARM_TAUCH*e;s.loef=lerp(LOEF_RUHE,LOEF_TAUCH,e);
+        if(p>.55)s.loef+=Math.sin((p-.55)*Math.PI*9)*7;   // im Zucker rühren
+        s.zuckerLoef=clamp((p-.6)/.3,0,1);break;
+      case 'heben':                                   // gefüllt raus und rüber
+        e=weich(p);s.x=X1;s.deck=-DECKEL_AUF;s.zuckerLoef=1;
+        s.armR=lerp(ARM_TAUCH,ARM_TASSE,e);s.loef=lerp(LOEF_TAUCH,LOEF_TRAGEN,e);break;
+      case 'giess':                                   // Laffe kippt, Zucker rieselt
+        e=weich(clamp(p*1.8,0,1));
+        s.x=X1;s.deck=-DECKEL_AUF;s.armR=ARM_TASSE;s.tilt=3;
+        s.loef=lerp(LOEF_TRAGEN,LOEF_KIPP,e)+Math.sin(p*Math.PI*7)*2;
         s.giessP=p;s.strahl=clamp(p*6,0,1)*clamp((1-p)*6,0,1);
-        s.zuckerLoef=1-weich(clamp((p-.1)/.5,0,1));   // der Löffel leert sich
+        s.zuckerLoef=1-weich(clamp((p-.08)/.45,0,1));
         s.pegel=lerp(STUFEN[r],STUFEN[r+1],weich(p));break;
-      case 'auf':                                     // zurück in die Dose, Deckel zu
-        e=weich(p);s.x=X1;s.tilt=3*(1-e);s.deck=(-10-DECKEL_AUF)*(1-e);
-        s.loef=(SCHWENK+KIPPLOEFFEL)*(1-e);
+      case 'zurueck':                                 // Arme zurück, Deckel zu
+        e=weich(p);s.x=X1;s.deck=-DECKEL_AUF*(1-e);
+        s.armR=ARM_TASSE*(1-e);s.loef=lerp(LOEF_KIPP,LOEF_RUHE,e);
         s.pegel=STUFEN[r+1];break;
-      case 'dreh':                                    // Kehrtwende: einmal auf der Stelle
+      case 'dreh':                                    // Kehrtwende auf der Stelle
         s.x=X1;s.dir=Math.cos(p*Math.PI);s.y=-12*Math.sin(p*Math.PI);s.pegel=STUFEN[r+1];break;
       case 'rueck':
-        s.x=lerp(X1,X0,weich(p));s.dir=-1;huepfen(s,p,HUEPFER,-1);
-        s.loef=Math.sin(p*HUEPFER*2*Math.PI)*11;s.pegel=STUFEN[r+1];break;
+        s.x=lerp(X1,X0,weich(p));s.dir=-1;huepfen(s,p,HUEPFER,-1);gangArme(s);
+        s.pegel=STUFEN[r+1];break;
       case 'dreh2':
         s.x=X0;s.dir=-Math.cos(p*Math.PI);s.y=-12*Math.sin(p*Math.PI);s.pegel=STUFEN[r+1];break;
       default:
@@ -317,7 +338,7 @@ function zustand(t){
     s.haufen=.62+.38*clamp(ft/.7,0,1);
     if(ft>.25&&ft<1.45)huepfen(s,(ft-.25)/1.2,2,1);     // Freudensprünge
     s.funke=clamp(ft/.5,0,1)*clamp((FINALE-ft)/.8,0,1);
-    s.loef=Math.sin(ft*7)*7;
+    s.loef=LOEF_RUHE+Math.sin(ft*7)*9;s.armR=Math.sin(ft*7)*8;
   }else{                                                // Tasse wird geleert, dann von vorn
     var et=(t-(RUNDEN*RUNDE+FINALE))/LEEREN;
     s.text=RUNDEN;s.x=X0;
@@ -350,8 +371,10 @@ function zeichne(s){
   var hoch=clamp(-s.y/HUB,0,1);
   schatten.setAttribute('transform','translate('+f(s.x+s.tilt*.35)+','+BASE+') scale('+f(1-.28*hoch)+',1)');
   schatten.setAttribute('opacity',f(.95-.45*hoch));
-  loeffel.setAttribute('transform','rotate('+f(s.loef)+',30,-40)');
-  deckel.setAttribute('transform','rotate('+f(s.deck)+',-32,-40)');
+  deckel.setAttribute('transform','rotate('+f(s.deck)+','+LSCHULTER_X+','+SCHULTER_Y+')');
+  armR.setAttribute('transform','rotate('+f(s.armR)+','+SCHULTER_X+','+SCHULTER_Y+')');
+  var hand=drehPunkt(HAND_X,HAND_Y,s.armR,SCHULTER_X,SCHULTER_Y);
+  loeffel.setAttribute('transform','translate('+f(hand.x)+','+f(hand.y)+') rotate('+f(s.loef)+')');
   pegel.setAttribute('transform','translate(0,'+f(lerp(PEGEL_LEER,PEGEL_VOLL,s.pegel))+')');
   berg.setAttribute('transform','translate('+TASSE+','+RAND+') scale('+f(.55+.45*s.berg)+','+f(Math.max(s.berg,0))+')');
   haufen.setAttribute('transform','translate(556,'+BASE+') scale('+f(Math.max(s.haufen,0))+')');
@@ -362,8 +385,8 @@ function zeichne(s){
      leicht gestreuten Bahnen, unten schneller — das liest sich als Rieseln,
      nicht als gegossener Strang. */
   if(s.strahl>.01){
-    var hp=drehPunkt(KOPF_X,KOPF_Y,s.loef,LOEF_X,LOEF_Y);
-    var hx=s.x+hp.x,hy=BASE+s.y+hp.y+3;
+    var a=s.loef*Math.PI/180;
+    var hx=s.x+hand.x+Math.sin(a)*LAFFE,hy=BASE+s.y+hand.y-Math.cos(a)*LAFFE+3;
     var zy=Math.min(lerp(PEGEL_LEER,PEGEL_VOLL,s.pegel),RAND+14);
     for(var i=0;i<KOERNER.length;i++){
       var u=(s.giessP*1.75+i*0.137)%1;
