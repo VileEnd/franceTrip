@@ -78,7 +78,14 @@ function emojiImage(emoji,size){
    Das Modell wird pro Frame auf eine feste Pixelgröße skaliert, damit es
    bei jedem Zoom gleich groß erscheint.                                    */
 var MESH=SB.mesh;
-function buildVehicleMesh(kind){return MESH.vehicle(kind,V);}
+/* Auf der Karte bewusst gröber tesselliert als im eigenen Canvas: dort
+   zählt jedes Detail, hier zählt jede Millisekunde pro Bild. */
+var DETAIL=V.detail||(SB.lowPower?0.5:0.75);
+function buildVehicleMesh(kind){
+  var C={};for(var k in V)C[k]=V[k];
+  C.detail=DETAIL;
+  return MESH.vehicle(kind,C);
+}
 
 var layerApi={setKind:function(){}};
 function makeVehicleLayer(map){
@@ -132,7 +139,7 @@ function makeVehicleLayer(map){
       gl.clear(gl.DEPTH_BUFFER_BIT);   // letzter Layer → Fahrzeug immer sichtbar
       gl.disable(gl.BLEND);
       gl.disable(gl.CULL_FACE);
-      MESH.draw(gl,P,buf,count,MESH.mul(mat,model),lm,null);
+      MESH.draw(gl,P,buf,count,MESH.mul(mat,model),lm);
       gl.disable(gl.DEPTH_TEST);
       gl.enable(gl.BLEND);
     }
@@ -212,7 +219,7 @@ function boot(){
   SB.mapCtl.map=map;
   map.on('load',function(){
     // 3D-Gelände ist der teuerste Layer – auf Phones/schwachen Geräten weglassen.
-    if(M.terrain!==false&&!SB.lowPower){try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
+    if(M.terrain===true&&!SB.lowPower){try{map.addSource('dem',{type:'raster-dem',encoding:'terrarium',
       tiles:['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'],
       tileSize:256,maxzoom:11});
       map.setTerrain({source:'dem',exaggeration:1.5});}catch(e){}}

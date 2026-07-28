@@ -31,11 +31,12 @@ Fertig. Alles andere (`js/core|mesh|ui|map|music|story|tee3d.js`,
 | `js/music.js`  | Musik am Meilenstein inkl. Dialog — überspringt sich selbst, wenn der Trip keine Musik hat |
 | `js/story.js`  | Scroll-Steuerung: geglätteter Render-Loop + Autopilot |
 | `js/tee3d.js`  | Macht aus dem T-Shirt-Abschnitt ein drehendes 3D-Modell (SVG bleibt Rückfallebene) |
+| `js/teapot.js` | Marschierende Teekanne (Ladeanzeige der Karte & Seitenende) |
 | `css/style.css`| Alle Styles (DB-rotes Design, generische Klassen) |
 | `index.html`   | Generische Hülle mit leeren Containern |
 
 Ladereihenfolge (in `index.html`):
-`core → trip → mesh → ui → map → music → story → tee3d`.
+`core → trip → mesh → ui → map → music → story → tee3d → teapot`.
 Klassische `<script>`-Tags mit gemeinsamem `SB`-Namespace — läuft direkt von
 Platte (`file://`) und auf GitHub Pages, kein Build-Schritt.
 
@@ -72,13 +73,20 @@ SB.trip = {
     vehicle3d:false,                   // → flaches Emoji statt 3D-Modell
     trainEmoji:'🚆',                   // nur für die Emoji-Variante
     routeColor:'#EC0016', doneColor:'#FFD800', stopColor:'#EC0016',
-    bg:'#EFEDE8', terrain:false,       // terrain:false = kein 3D-Gelände
+    bg:'#EFEDE8', terrain:true,        // 3D-Gelände (Standard: aus, weil teuer)
     pitchScale: 1                      // Kamera-Neigung dämpfen (0…1)
   },
 
   route: {
     coords: [[lng,lat], …],            // Streckenpunkte, Hin- UND Rückweg
     stopIdx: [0, 5, …]                 // Indizes der Punkte mit Halte-Kreis
+  },
+
+  teapot: {                            // ODER null → keine Teekanne
+    color:'#8FD0EE', shade:'#5FAAD2', trim:'#2E6F97',
+    caption:'…',                       // Zeile unter der Kanne am Seitenende
+    where:['loading','end'],           // wo sie auftaucht
+    speed:0.34, step:2.1               // Lauftempo & Schrittfrequenz
   },
 
   music: {                             // ODER null → Trip ohne Musik
@@ -160,7 +168,7 @@ lautlos auf `trainEmoji` zurück; `vehicle3d:false` erzwingt das Emoji.
 | `'train'` | Lok mit gelber Bugpartie + Wagen |
 | `'bus'` | Reisebus |
 | `'car'` | Auto |
-| `'croissant'` | ein Hörnchen (gebogen, mit Wickel-Rippen) |
+| `'croissant'` | ein Hörnchen mit diagonalen Wickeln |
 
 **Antippen:** Ein Klick aufs Fahrzeug tauscht `model` gegen `tapModel` und
 wieder zurück — beim Frankreich-Trip fährt der ICE dann als Croissant weiter.
@@ -170,6 +178,16 @@ bleibt — ein WebGL-Layer kennt keine anklickbaren Objekte. In der
 Emoji-Rückfallebene wird stattdessen das Symbol getauscht (`tapEmoji`).
 `tapModel:null` schaltet den Gag ab.
 
+### Warum es rund aussieht
+
+Alle Modelle sind **parametrische Flächen**, keine Klötzchen: `SB.mesh.surface(P,…)`
+tastet eine Funktion `P(u,v)` ab und leitet die Normalen aus den Ableitungen
+ab — daher die weichen Kanten. Darauf setzen `revolve` (Rotationskörper),
+`sweep` (Rohr entlang einer Kurve) und `ring` (Fläche zwischen zwei Ringen)
+auf. Die Farbfunktion färbt jeden Punkt einzeln, so entstehen z. B. das
+Fensterband des ICE ohne zusätzliche Geometrie. `detail` regelt die
+Segmentzahl: auf der Karte gröber, im eigenen Canvas feiner.
+
 ### Das 3D-T-Shirt
 
 Der Abschnitt `type:'tee'` wird von `js/tee3d.js` zu einem langsam drehenden
@@ -177,7 +195,17 @@ Der Abschnitt `type:'tee'` wird von `js/tee3d.js` zu einem langsam drehenden
 gezeichnet und als Textur aufgelegt — der Text bleibt dadurch scharf und
 steht weiterhin in `js/trip.js`. Gezeichnet wird nur, solange das Shirt im
 Bild ist; bei `prefers-reduced-motion` steht es still. Ohne WebGL bleibt die
-gezeichnete SVG-Variante stehen, `d3:false` erzwingt sie.
+gezeichnete SVG-Variante stehen, `d3:false` erzwingt sie. `cut:'women'`
+(Standard) ist tailliert mit Cap-Sleeves und rundem Ausschnitt,
+`cut:'unisex'` schneidet gerade.
+
+### Die marschierende Teekanne
+
+`js/teapot.js` hängt eine kleine 3D-Teekanne ein, die von links nach rechts
+durchs Bild stapft: Beine im Wechsel, Körper im Takt wippend, Deckel
+hüpfend, Löffel hinterherwackelnd. Sie läuft während die Karte lädt und
+noch einmal am Seitenende. Gezeichnet wird nur, solange sie sichtbar ist —
+und bei `prefers-reduced-motion` bleibt sie stehen.
 
 ### Tipps fürs Routen-Bauen
 
@@ -223,8 +251,17 @@ Zwei Einstellungen im Repository, falls der erste Lauf hakt:
 - **Autoplay:** Browser erlauben Ton nur nach echter Geste — deshalb der
   Dialog am Musik-Meilenstein (Klick auf sichtbaren Button = überall
   zuverlässig). Lautstärke wird sanft von 0 hochgefadet.
+- **Flüssige Fahrt:** Autopilot, Glättung und Zeichnen laufen in *einer*
+  `requestAnimationFrame`-Schleife (`js/story.js`). Vorher rief eine zweite
+  Schleife das Zeichnen erst auf das Scroll-Ereignis hin auf — wann das
+  zugestellt wird, entscheidet der Browser, und daraus entstand ein
+  ungleichmäßiger Bildabstand. Zusätzlich gedrosselt: die zurückgelegte
+  Strecke (GeoJSON-Quelle, alle 120 ms statt jedes Bild) und die
+  Story-Karten (nur die sichtbare wird angefasst).
 - **Performance auf Phones:** kein 3D-Gelände, keine `backdrop-filter`-Blurs,
-  einfache Tiles, flachere Kamera — gesteuert über `SB.isMobile`/`SB.lowPower`
-  in `core.js`.
+  einfache Tiles, flachere Kamera, gröber tesselliertes Fahrzeug — gesteuert
+  über `SB.isMobile`/`SB.lowPower` in `core.js`.
+- **3D-Gelände** kostet pro Bild einen kompletten zusätzlichen Renderdurchgang
+  und ist deshalb standardmäßig **aus**. Wer die Berge sehen will: `map.terrain:true`.
 - **`prefers-reduced-motion`** wird respektiert: keine Animationen, kein
   Autopilot, Karten-Kamera bleibt flach.

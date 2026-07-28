@@ -50,6 +50,13 @@ SB.trip={
     //   terrain:false, pitchScale, vehicle3d:false
   },
 
+  /* Marschierende Teekanne: läuft während die Karte lädt und am Seitenende
+     durchs Bild. teapot:null schaltet sie ab. */
+  teapot:{
+    color:'#8FD0EE',shade:'#5FAAD2',trim:'#2E6F97',
+    caption:'Die Kanne besteht darauf, mitzukommen.'
+  },
+
   /* Route als [Lng,Lat]-Punkte, Hin- und Rückweg. stopIdx = Indizes der
      Punkte, die als Halte-Kreise auf der Karte markiert werden. */
   route:{
@@ -172,6 +179,7 @@ SB.trip={
      sub:'Unser Motto steht schon drauf, ganz ohne Diskussion: <b>Essen bis zum Umfallen.</b>',
      emoji:'🥐',tag:'UT',
      motto1:'Essen bis zum',motto2:'Umfallen.',
+     cut:'women',                    // 'women' | 'unisex' · d3:false = flaches SVG
      ariaLabel:'Weißes T-Shirt mit Croissant und dem Aufdruck: Essen bis zum Umfallen',
      caption:'Weißes Baumwoll-Tee, Croissant vorne drauf. Pflichtausstattung — Nachschlag ist kein Verstoß, sondern Vorschrift.'},
 

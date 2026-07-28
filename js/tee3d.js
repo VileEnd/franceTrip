@@ -80,7 +80,7 @@ function upgrade(host,sec){
   wrap.insertBefore(cv,wrap.firstChild);
 
   var P=MESH.program(gl);
-  var mesh=MESH.tee({cloth:sec.cloth,trim:sec.trim});
+  var mesh=MESH.tee({cloth:sec.cloth,trim:sec.trim,cut:sec.cut,detail:SB.isMobile?0.7:1});
   var count=mesh.length/MESH.FLOATS;
   var buf=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,buf);
@@ -104,7 +104,7 @@ function upgrade(host,sec){
     // Licht bleibt im Raum stehen, während sich das Shirt dreht.
     var lw=[-0.45,0.62,0.65],ca=Math.cos(-angle),sa=Math.sin(-angle);
     var lm=[lw[0]*ca+lw[2]*sa, lw[1], -lw[0]*sa+lw[2]*ca];
-    MESH.draw(gl,P,buf,count,viewMatrix(angle,aspect),lm,tex,0.72);
+    MESH.draw(gl,P,buf,count,viewMatrix(angle,aspect),lm,{tex:tex,amb:0.72,spec:0.05});
   }
   function loop(ts){
     raf=null;
