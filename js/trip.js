@@ -1,8 +1,12 @@
 /* ==========================================================================
-   ⭐ DER TRIP: Schlemmer Bahn SB 143 — Nürnberg → Elsass → Burgund
+   ⭐ DER TRIP: Dolce Vita Express DV 294 — Nürnberg → Rom, mit dem Nachtzug
    Für eine neue Reise NUR diese Datei kopieren & anpassen (plus die
    <head>-Metadaten in index.html). Schema-Doku: siehe README.md.
    Alle Text-Felder dürfen HTML enthalten (<b>, <i>, <span class="sparpreis">…).
+
+   Preise & Fahrpläne: Stand Sommer 2026, alles selbst nachgeschaut und
+   gerundet. Der Nachtzug fährt saisonal unterschiedlich — vor dem Buchen
+   einmal im ÖBB-Fahrplan gegenprüfen.
    ========================================================================== */
 (function(){
 'use strict';
@@ -11,202 +15,203 @@ var SB=window.SB;
 SB.trip={
 
   meta:{
-    title:'Schlemmer Bahn Sonderzug – Willst du mit mir verreisen?',
-    brand:{abbr:'SB',tagline:'Ein Trip, den ich uns ausgedacht habe.',logoTitle:'Nicht klicken. (Doch, klick.)'}
+    title:'Dolce Vita Express – Fährst du mit mir nach Rom?',
+    brand:{abbr:'DV',tagline:'Einmal Rom. Im Liegen hin, zu Fuß durch.',logoTitle:'Nicht drücken. (Doch, drück.)'}
   },
 
   config:{
     email:'frankreich.0wl0i@passmail.net',
-    sceneVh:320,           // Scrollhöhe pro Szene (vh) — mehr = gemächlicher
-    autoSecPerScene:20,    // Autopilot: Sekunden pro Szene
+    sceneVh:320,
+    autoSecPerScene:20,
     tickerLabel:'Fahrtkosten p. P.'
   },
 
   hero:{
-    eyebrow:'Sonderzug SB 143 · nur ein Vorschlag',
-    title:'Willst du mit mir <span>verreisen?</span>',
-    sub:'Nürnberg → Elsass → Burgund. Etwa eine Woche, zwei Plätze. Ich hab\'s tatsächlich durchgerechnet.',
-    kicker:'Croissants sind eingeplant · der Rosmarin auch, frag nicht',
-    scrollhint:'Einmal scrollen — dann läuft\'s von allein weiter ↓',
-    floaties:['🥐','🌿','🧈','🥖','🍲','🌿','🥐']
+    eyebrow:'Nachtzug DV 294 · nur ein Vorschlag',
+    title:'Fährst du mit mir <span>nach Rom?</span>',
+    sub:'Abends in München einsteigen, morgens in Rom aufwachen. Vier Tage, alles zu Fuß, unter 90 € Fahrt pro Person.',
+    kicker:'Ohne Flughafen, ohne Mietwagen · Cornetto ist eingeplant',
+    scrollhint:'Einmal scrollen — dann fährt es von allein weiter ↓',
+    floaties:['🍕','🍝','🍦','☕','🍋','🏛️','🍕']
   },
 
   map:{
-    /* Zoom bleibt die ganze Fahrt konstant — die Karte lädt ihre Kacheln
-       dann einmal statt bei jeder Zoomstufe neu. 'steps' = feste Stufe pro
-       Szene, 'scenes' = die alten, durchgehenden Zoomfahrten. */
-    zoomMode:'fixed',
-    zoom:9.6,
-    /* 3D-Fahrzeug: 'ice' | 'train' | 'bus' | 'car'. vehicle3d:false = Emoji.
-       Ein Tipp aufs Fahrzeug tauscht es gegen tapModel (null = aus).
-       'ice' fährt als ganzer Triebzug auf Gleisen: cars = Anzahl Wagen,
-       size = Pixel je WAGEN, wordmark/logo = Beschriftung, track:false
-       nimmt die Schienen weg. */
-    vehicle:{model:'ice',color:'#EC0016',accent:'#FFD800',glass:'#26313E',light:'#F4F2EE',
-      wordmark:'ICE',logo:'DB',   // cars bleibt offen: Handy 3, sonst 4
+    /* 'steps': feste Zoomstufe je Szene. Die Fahrt geht über 1000 km, in Rom
+       wollen wir aber nah ran — mit 'fixed' wäre beides derselbe Ausschnitt. */
+    zoomMode:'steps',
+    vehicle:{model:'ice',color:'#1B2A5B',accent:'#E2001A',glass:'#26313E',light:'#F4F2EE',
+      wordmark:'NIGHTJET',logo:'ÖBB',
       tapModel:'croissant',
       tapTitle:'Antippen — auf eigene Gefahr',
-      tapAria:'Zug antippen: als Croissant weiterfahren',
-      tapToast:'🥐 Croissant-Express — bon voyage!',
-      tapToastBack:'🚄 Zurück auf die Schiene.'},
+      tapAria:'Zug antippen: als Cornetto weiterfahren',
+      tapToast:'🥐 Cornetto-Express — buon viaggio!',
+      tapToastBack:'🚆 Zurück auf die Schiene.'},
     trainEmoji:'🚆'
-    // Optional überschreibbar: routeColor, doneColor, stopColor, bg,
-    //   terrain:false, pitchScale, vehicle3d:false
   },
 
-  /* Marschierende Teekanne: läuft während die Karte lädt und am Seitenende
-     durchs Bild. teapot:null schaltet sie ab. */
+  /* Marschierende Teekanne als Ladeanzeige der Karte. */
   teapot:{
     color:'#8FD0EE',shade:'#5FAAD2',trim:'#2E6F97',
-    where:['loading']          // nur als Ladeanzeige — am Seitenende läuft die Zuckerdose
+    where:['loading']
   },
 
-  /* Zuckerdosen-Szene direkt vor dem RSVP: die Dose marschiert von links nach
-     rechts zur Tasse und füllt sie Runde für Runde. captions = eine Zeile je
-     Runde, die letzte gehört zum übervollen Finale (also immer eine mehr als
-     Füll-Runden). zucker:null schaltet die Szene ab. */
+  /* Zuckerdosen-Szene vor dem RSVP — in Rom heißt das Ziel Espresso. */
   zucker:{
-    /* Ohne title/sub: die Szene steht für sich, nur die Zeile darunter spricht. */
-    captions:['Erster Löffel. Zum Aufwärmen.',
-              'Zweiter Gang. Sie meint es ernst.',
+    captions:['Un caffè. Der erste von vielen.',
+              'Zweiter. Es ist ja Urlaub.',
               'Langsam wird\'s süß.',
-              'Noch einer — es sind ja Ferien.',
+              'Noch einer — wir laufen ihn wieder ab.',
               'Voll. Fehlt nur noch dein Ja.']
   },
 
-  /* Route als [Lng,Lat]-Punkte, Hin- und Rückweg. stopIdx = Indizes der
-     Punkte, die als Halte-Kreise auf der Karte markiert werden. */
+  /* Route als [Lng,Lat]-Punkte: Hinweg 0–23, Rückweg gespiegelt.
+     Nürnberg → München → Brenner → Bozen → Verona → Bologna → Florenz → Rom. */
   route:{
-    coords:[[11.0825,49.4456],[10.5719,49.3009],[10.0664,49.1367],[9.7550,49.1030],[9.4310,48.9466],[9.1829,48.7840],
-      [8.9600,48.9360],[8.7060,48.8940],[8.4009,48.9936],[8.2110,48.8586],[8.1907,48.7904],[8.0760,48.6260],[7.9466,48.4766],[7.8100,48.5732],
-      [7.7860,48.5760],[7.7455,48.5839],[7.4540,48.2597],[7.3468,48.0723],[7.2770,48.0870],[7.3468,48.0723],[7.3423,47.7418],[6.8990,47.5866],[5.9540,47.3080],[5.0272,47.3235],
-      [4.9300,47.1620],[4.8485,47.0230],[4.7522,46.9137],[4.4730,46.7550],[4.1110,46.4522],[4.0331,46.2726],
-      [4.1110,46.4522],[4.4730,46.7550],[4.7522,46.9137],[4.8485,47.0230],[5.0272,47.3235],
-      [5.9540,47.3080],[6.8990,47.5866],[7.3423,47.7418],[7.3468,48.0723],[7.7455,48.5839],[7.8100,48.5732],[7.9466,48.4766],[8.4009,48.9936],[9.1829,48.7840],[10.0664,49.1367],[11.0825,49.4456]],
-    stopIdx:[0,5,8,12,13,15,17,18,23,25,29]
+    coords:[[11.0825,49.4456],[11.2100,49.2400],[11.4419,48.7447],[11.5100,48.5300],[11.5581,48.1402],
+      [11.9700,48.0450],[12.1244,47.8561],[12.1667,47.5833],[12.0670,47.4870],[11.7700,47.3880],
+      [11.4011,47.2632],[11.5064,47.0033],[11.4300,46.8950],[11.6560,46.7150],[11.3548,46.4983],
+      [11.1211,46.0748],[11.0400,45.8900],[10.9828,45.4299],[11.1500,45.0500],[11.3426,44.4949],
+      [11.2481,43.7807],[11.8800,43.4600],[12.3900,42.4600],[12.5018,41.9009],
+      [12.3900,42.4600],[11.8800,43.4600],[11.2481,43.7807],[11.3426,44.4949],[11.1500,45.0500],
+      [10.9828,45.4299],[11.0400,45.8900],[11.1211,46.0748],[11.3548,46.4983],[11.6560,46.7150],
+      [11.4300,46.8950],[11.5064,47.0033],[11.4011,47.2632],[11.7700,47.3880],[12.0670,47.4870],
+      [12.1667,47.5833],[12.1244,47.8561],[11.9700,48.0450],[11.5581,48.1402],[11.5100,48.5300],
+      [11.4419,48.7447],[11.2100,49.2400],[11.0825,49.4456]],
+    stopIdx:[0,4,10,14,17,19,20,23]
   },
 
-  /* Musik am Meilenstein. Weglassen (music:null) = Trip ohne Musik.
-     triggerScene: ab dieser Szene startet der Titel.
-     gate:false = ohne Dialog, damit die Fahrt an der Grenze nicht stehen
-     bleibt. autostart:true = der Titel legt am Meilenstein von selbst los;
-     lässt der Browser noch keinen Ton zu, läuft er stumm weiter und wird bei
-     der nächsten Berührung irgendwo auf der Seite aufgedreht (der Hinweis
-     unten sagt das). Ein Druck auf ♪ ist nirgends nötig. */
   music:{
-    ytId:'6A_lOwSnS8c',          // Zaz — „La vie en rose"
+    ytId:'6A_lOwSnS8c',
     label:'La vie en rose — Zaz',
     volume:65,
-    triggerScene:3,              // Szene „Über den Rhein: Straßburg"
+    triggerScene:3,              // Szene „Über den Brenner" → Italien
     gate:false,
-    autostart:true,
-    hint:'🇫🇷 Rhein überquert — „La vie en rose" läuft. Einmal tippen, falls du nichts hörst.'
+    hint:'🇮🇹 Brenner geschafft — ♪ oben antippen für Musik.'
   },
 
-  /* Szenen der Kartenfahrt.
-     i0/i1: Routen-Punkt-Index Start/Ende · z: Zoom · p: Pitch · b: Bearing
-     cost: Ticketkosten dieser Etappe (für den Ticker) · t: Titel · w: Witz
-     x: Kurztext · fact: Fun Fact · k: Kostenlabel · frei: grünes Label
-     ch: Chips · cls: Badge-Farbe (b-re, b-tram, b-ter, b-tgv, b-bus, b-herz) */
   scenes:[
-    {i0:0,i1:0,z0:11.8,z1:11.8,p0:0,p1:50,b0:0,b1:18,cost:0,badge:"SB 143",cls:"b-herz",
+    {i0:0,i1:0,z0:11.6,z1:11.6,p0:0,p1:50,b0:0,b1:18,cost:0,badge:"DV 294",cls:"b-herz",
      t:"Nürnberg Hbf",w:"„Okay. Zeit für die eigentliche Frage.“",
-     x:"Zwei Plätze, auf deinem liegt ein Croissant. Elsass &amp; Burgund, eine Woche, mit dem Zug — kommst du mit?",
-     fact:"Die allererste deutsche Eisenbahn fuhr 1835 ab Nürnberg. Wir setzen die Tradition fort.",
-     k:"0,00 € · D-Ticket",frei:true,ch:["Croissant liegt bereit","Rosmarin ist eingepackt"]},
-    {i0:0,i1:5,z0:11.8,z1:8.4,p0:50,p1:48,b0:18,b1:-12,cost:0,badge:"RE 90",cls:"b-re",
-     t:"Quer durch Franken",w:"„Der RE 90 hält überall. Wirklich überall. Auch emotional.“",
-     x:"Ansbach, Crailsheim, Schwäbisch Hall. Drei Stunden, null Euro, ein geteilter Kopfhörer.",
-     fact:"Schwäbisch Hall hieß bis 1934 einfach nur „Hall“ — das Schwäbisch kam per Erlass dazu.",
+     x:"Zwei Plätze, einer davon deiner. Vier Tage Rom, hin und zurück auf Schienen — kommst du mit?",
+     fact:"Rom liegt 1000 km entfernt. Mit dem Nachtzug ist das genau eine Nacht Schlaf.",
+     k:"0,00 € · D-Ticket",frei:true,ch:["Cornetto liegt bereit","Rückfahrt ist schon eingeplant"]},
+
+    {i0:0,i1:4,z0:9.6,z1:9.6,p0:50,p1:48,b0:18,b1:-6,cost:0,badge:"RE",cls:"b-re",
+     t:"Erstmal nach München",w:"„Der Regionalzug: langsam, aber im Preis schon drin.“",
+     x:"Knapp zwei Stunden über Ingolstadt, mit dem D-Ticket. Wir haben Zeit — der Nachtzug fährt erst abends.",
+     fact:"Bis München zahlen wir keinen Cent extra. Das D-Ticket gilt für alles ohne Aufpreis.",
      k:"0,00 € · D-Ticket",frei:true},
-    {i0:5,i1:13,z0:8.4,z1:9.4,p0:48,p1:54,b0:-12,b1:22,cost:0,badge:"RE/IRE",cls:"b-re",
-     t:"Stuttgart → Kehl",w:"„In Kehl endet Deutschland. Kehl-mal drüber nach.“",
-     x:"Bis Kehl gilt das D-Ticket. Die 2 € für Frankreich übernehm ich.",
-     fact:"Unterwegs: Baden-Baden — die einzige Stadt, die so gut ist, dass sie sich selbst zitiert.",
-     k:"0,00 € · D-Ticket",frei:true},
-    {i0:13,i1:15,z0:9.4,z1:12.4,p0:54,p1:56,b0:22,b1:55,cost:2,badge:"TRAM D",cls:"b-tram",
-     t:"Über den Rhein: Straßburg",w:"„Grenzüberschreitend gut — ein Tram-Traum.“",
-     x:"Tram über den Rhein, abends Flammkuchen, morgens Pain au Chocolat am Kanal — Schulter an Schulter.",
-     fact:"Das Straßburger Münster war 227 Jahre lang das höchste Gebäude der Welt.",
-     k:"+ 2,00 € · Tram D",ch:["Binchstub","Plein la Moustache","Au Pont du Corbeau"]},
-    {i0:15,i1:18,z0:12.4,z1:11.0,p0:56,p1:54,b0:55,b1:12,cost:12,badge:"TER",cls:"b-ter",
-     t:"Colmar & Turckheim: Cocotte-Tag",w:"„Hier geht die Cocotte ab. Gusseisen: der einzige harte Stoff an Bord.“",
-     x:"Staub-Store in Turckheim: die größte Cocotte-Auswahl der Welt. Und ja, wir kaufen den Rosmarin-Topf.",
-     fact:"Colmar gilt als trockenste Stadt Frankreichs — bestes Croissant-Wetter, garantiert.",
-     k:"+ 12,00 € · TER-Tag",ch:["Staub-Store","Beurre de baratte","Marché Couvert"]},
-    {i0:18,i1:23,z0:11.0,z1:8.0,p0:54,p1:48,b0:12,b1:-32,cost:29,badge:"TGV",cls:"b-tgv",
-     t:"Mit 320 km/h nach Dijon",w:"„TGV: Très Günstige Verbindung. Wer spät bucht: Très Gierige Verbindung.“",
-     x:"2 h 06 direkt, ab 29 €. Links ziehen die Vogesen vorbei — in echtem 3D.",
-     fact:"Ein TGV hält den Schienen-Weltrekord: 574,8 km/h. Wir nehmen die gemütlichen 320.",
-     k:"+ 29,00 € · Sparpreis"},
-    {i0:23,i1:23,z0:8.0,z1:12.4,p0:48,p1:56,b0:-32,b1:-64,cost:0,badge:"DIJON",cls:"b-tgv",
-     t:"Dijon: Hauptquartier",w:"„Senfsationell hier.“",
-     x:"Mittags Les Halles, Senf bei Fallot, Lebkuchen bei Mulot &amp; Petitjean. Alles zu Fuß.",
-     fact:"Gustave Eiffel ist gebürtiger Dijoner — die Markthalle gilt als sein Entwurf.",
-     k:"0,00 € · zu Fuß, Ehrensache",frei:true,ch:["Les Halles","Fallot & Maille","Du Pain Pour Demain"]},
-    {i0:23,i1:25,z0:12.4,z1:11.0,p0:56,p1:54,b0:-64,b1:-26,cost:14,badge:"TER",cls:"b-ter",
-     t:"Beaune-jour!",w:"„Und zum Essen: Beaune Appétit.“",
-     x:"Samstagsmarkt, Senfmühlen-Tour bei Fallot, Traubensaft direkt vom Winzer.",
-     fact:"Das bunte Dach der Hospices de Beaune leuchtet seit 1443 — Burgunds berühmteste Ziegel.",
-     k:"+ 14,00 € · Dijon ⇄ Beaune",ch:["Moutarderie Fallot","Jus de raisin","Époisses (mutig!)"]},
-    {i0:25,i1:29,z0:11.0,z1:10.2,p0:54,p1:52,b0:-26,b1:8,cost:0,badge:"BUS+TER",cls:"b-bus",
-     t:"Bonus: Marcigny (2-Wochen-Version)",w:"„Emile Henry, −35 bis −40 %: der reinste Ton-Gewinn.“",
-     x:"Werksverkauf des Keramik-Königs. Aber: <b>Di &amp; So geschlossen!</b>",
-     fact:"Emile Henry brennt seit 1850 Keramik in Marcigny — im selben Ort, seit sechs Generationen.",
-     k:"optional · ~25 € extra",frei:true},
-    {i0:29,i1:45,z0:10.2,z1:7.4,p0:52,p1:42,b0:8,b1:0,cost:31,badge:"TGV+TRAM+RE",cls:"b-tgv",
-     t:"Heimfahrt",w:"„Zug endet hier. Wie unsere Ausreden.“",
-     x:"TGV, Tram, dann 0 € bis Nürnberg. Im Gepäck: Senf, Butter, 4 kg Gusseisen, ein Topf Rosmarin.",
-     fact:"Schon 1390 regelte ein Erlass, was in Dijoner Senf darf. In unseren Rucksack: alles.",
-     k:"+ 31,00 € · und heim",ch:["Gepäck: schwerer als hin","Rosmarin hat überlebt"]}
+
+    {i0:4,i1:7,z0:9.4,z1:9.4,p0:48,p1:52,b0:-6,b1:14,cost:44.90,badge:"NIGHTJET",cls:"b-bus",
+     t:"München: einsteigen, hinlegen",w:"„Das einzige Hotel, das nachts 700 km zurücklegt.“",
+     x:"Abends ab München, Frühstück gibt's in Italien. Sitzwagen ist am günstigsten, Liegewagen kostet etwa 20 € mehr — dafür schläft man wirklich.",
+     fact:"Eine Nacht im Zug spart eine Hotelnacht. Der Nachtzug rechnet sich zweimal.",
+     k:"+ 44,90 € · Sparschiene",ch:["Sitzwagen ab ca. 39 €","Liegewagen ab ca. 59 €","6 Monate vorher buchbar"]},
+
+    {i0:7,i1:13,z0:9.0,z1:9.0,p0:52,p1:50,b0:14,b1:-10,cost:0,badge:"BRENNER",cls:"b-bus",
+     t:"Über den Brenner, im Schlaf",w:"„Die Alpen: schön, aber wir haben die Augen zu.“",
+     x:"Kufstein, Innsbruck, Brenner. Wenn du wach wirst und aus dem Fenster schaust, ist draußen schon Südtirol.",
+     fact:"Der Brenner ist mit 1371 m der niedrigste Alpenübergang — deshalb führt hier seit 1867 eine Bahn drüber.",
+     k:"im Nachtzug-Preis",frei:true},
+
+    {i0:13,i1:19,z0:8.6,z1:8.6,p0:50,p1:46,b0:-10,b1:8,cost:0,badge:"NJ 294",cls:"b-bus",
+     t:"Verschlafen: Verona, Bologna",w:"„Zwei Weltstädte, komplett im Schlaf genommen.“",
+     x:"Der Zug rollt nachts durch die Po-Ebene. Wir kriegen davon nichts mit — und das ist auch der Plan.",
+     fact:"Bologna hat 38 km überdachte Arkaden. Zu Fuß trocken durch eine ganze Stadt.",
+     k:"im Nachtzug-Preis",frei:true},
+
+    {i0:19,i1:23,z0:8.4,z1:8.4,p0:46,p1:54,b0:8,b1:26,cost:0,badge:"ROMA",cls:"b-tgv",
+     t:"Ankunft: Roma Termini",w:"„Buongiorno. Der Zug hat uns hergetragen, ab jetzt tragen uns die Füße.“",
+     x:"Morgens raus aus dem Bahnhof, Rucksack ins Zimmer, Cappuccino im Stehen an der Bar. Ab hier zahlen wir keine Fahrkarte mehr.",
+     fact:"An der Bar kostet der Espresso rund 1,20 €, am Tisch das Doppelte. Also stehen wir.",
+     k:"0,00 € · angekommen",frei:true,ch:["Cappuccino nur vormittags","Wasser aus dem Nasone"]},
+
+    {i0:23,i1:23,z0:12.6,z1:12.6,p0:54,p1:56,b0:26,b1:-14,cost:0,badge:"ZU FUSS",cls:"b-ter",
+     t:"Runde 1: das antike Rom",w:"„Alle Wege führen nach Rom. Innerhalb Roms führen alle Wege bergauf.“",
+     x:"Von Termini an Santa Maria Maggiore vorbei zum Kolosseum, dann Forum, Palatin und hoch aufs Kapitol. Rund 4 km.",
+     fact:"Am ersten Sonntag im Monat sind die staatlichen Museen frei — Kolosseum und Forum inklusive.",
+     k:"0,00 € · zu Fuß",frei:true,ch:["Kolosseum ca. 18 €","Forum im selben Ticket","Kapitolsplatz frei"]},
+
+    {i0:23,i1:23,z0:12.8,z1:12.8,p0:56,p1:54,b0:-14,b1:22,cost:0,badge:"ZU FUSS",cls:"b-ter",
+     t:"Runde 2: Centro Storico",w:"„Pantheon, Navona, Trevi — und dazwischen alle drei Meter ein Eis.“",
+     x:"Piazza Venezia, Pantheon, Piazza Navona, Campo de' Fiori, Trevibrunnen. Etwa 3,5 km, davon 3 km Kopfsteinpflaster.",
+     fact:"Die Kuppel des Pantheons ist seit 1900 Jahren die größte unbewehrte Betonkuppel der Welt.",
+     k:"0,00 € · zu Fuß",frei:true,ch:["Pizza al taglio nach Gewicht","Supplì aus der Friggitoria","Pantheon 5 €"]},
+
+    {i0:23,i1:23,z0:12.6,z1:12.6,p0:54,p1:52,b0:22,b1:-30,cost:0,badge:"ZU FUSS",cls:"b-ter",
+     t:"Runde 3: Trastevere & Gianicolo",w:"„Abends über den Fluss. Da drüben ist das Essen billiger.“",
+     x:"Über die Tiberinsel nach Trastevere, durch die Gassen und hoch auf den Gianicolo — der beste Blick über Rom, und er kostet nichts.",
+     fact:"Auf dem Gianicolo fällt jeden Mittag um zwölf ein Kanonenschuss. Seit 1904, damit die Kirchturmuhren zusammenpassen.",
+     k:"0,00 € · zu Fuß",frei:true,ch:["Sonnenuntergang gratis","Trapizzino probieren"]},
+
+    {i0:23,i1:46,z0:8.2,z1:8.2,p0:52,p1:42,b0:-30,b1:0,cost:44.90,badge:"HEIMFAHRT",cls:"b-bus",
+     t:"Nachts zurück",w:"„Zug endet in Nürnberg. Der Jetlag heißt hier Espresso-Entzug.“",
+     x:"Abends in Rom einsteigen, morgens in München frühstücken, mittags daheim. Im Gepäck: Kaffee, Pasta, wunde Füße.",
+     fact:"Wir sind in Rom rund 40 km gelaufen. Das ist ungefähr ein Marathon — nur mit Pausen für Eis.",
+     k:"+ 44,90 € · Sparschiene",ch:["Kaffee für zuhause","Blasenpflaster leer"]}
   ],
 
-  /* Inhaltsblöcke nach der Kartenfahrt, in dieser Reihenfolge.
-     Typen: 'price' (Tabelle + Budgetbalken), 'cards' (Kachel-Raster),
-            'tee' (Trikot-Grafik), 'html' (freier Block).
-     bg:'hell' = grauer Hintergrund (zum Abwechseln). */
   sections:[
     {type:'price',bg:'hell',
      title:'Der Kassenzettel.',
-     sub:'Nur die Zugtickets, pro Person, zusätzlich zum D-Ticket. Croissants kommen nochmal oben drauf, aber die zähl ich nicht mit.',
+     sub:'Nur die Fahrt, pro Person, zusätzlich zum D-Ticket. In Rom selbst kommt nichts mehr dazu — wir laufen.',
      cols:['Strecke','Produkt','Preis'],
      rows:[
-       {label:'Nürnberg → Stuttgart → Karlsruhe → Offenburg → Kehl',product:'RE / Regio (D-Ticket)',price:'0,00 €',free:true},
-       {label:'Kehl Bahnhof → Straßburg',product:'Tram D · CTS-Ticket',price:'2,00 €'},
-       {label:'Straßburg → Colmar → Turckheim &amp; zurück',product:'TER-Tag Elsass',price:'12,00 €'},
-       {label:'Straßburg → Dijon <span class="sparpreis">Sparpreis</span>',product:'TGV direkt · 2 h 06',price:'29,00 €'},
-       {label:'Dijon ⇄ Beaune',product:'TER Mobigo',price:'14,00 €'},
-       {label:'Dijon → Straßburg <span class="sparpreis">Sparpreis</span>',product:'TGV direkt · 2 h 06',price:'29,00 €'},
-       {label:'Straßburg → Kehl Bahnhof',product:'Tram D · CTS-Ticket',price:'2,00 €'},
-       {label:'Kehl → … → Nürnberg',product:'RE / Regio (D-Ticket)',price:'0,00 €',free:true}
+       {label:'Nürnberg → Ingolstadt → München',product:'RE (D-Ticket)',price:'0,00 €',free:true},
+       {label:'München → Rom <span class="sparpreis">Sparschiene</span>',product:'ÖBB Nightjet · über Nacht',price:'44,90 €'},
+       {label:'Rom, vier Tage',product:'zu Fuß',price:'0,00 €',free:true},
+       {label:'Rom → München <span class="sparpreis">Sparschiene</span>',product:'ÖBB Nightjet · über Nacht',price:'44,90 €'},
+       {label:'München → … → Nürnberg',product:'RE (D-Ticket)',price:'0,00 €',free:true}
      ],
-     total:{label:'Summe pro Person',price:'88,00 €'},
-     budget:{pct:73,text:'88 € von 120 € Budget · bleiben 32 € übrig, ungefähr eine Mini-Cocotte.'}},
+     total:{label:'Summe pro Person',price:'89,80 €'},
+     budget:{pct:60,text:'90 € von 150 € Budget · bleiben 60 € für Eis, Pizza und einen Kaffee zum Mitnehmen.'}},
+
+    {type:'cards',
+     title:'Rom zu Fuß: vier Runden',
+     sub:'Rom ist kleiner, als es aussieht. Vom Bahnhof bis zum Petersdom sind es keine 5 km — wir brauchen keine einzige Fahrkarte.',
+     items:[
+       {tag:'Runde 1 · ca. 4 km',title:'Das antike Rom',html:'Termini → Santa Maria Maggiore → Kolosseum → Forum &amp; Palatin → Kapitol → Piazza Venezia. Früh losgehen, dann steht man nicht in der Sonne an.',price:'Eintritt Kolosseum ca. 18 €'},
+       {tag:'Runde 2 · ca. 3,5 km',title:'Centro Storico',html:'Pantheon → Piazza Navona → Campo de\' Fiori → Trevi → Spanische Treppe. Dazwischen: Pizza al taglio, nach Gewicht bezahlt.',price:'Pantheon 5 €, der Rest frei'},
+       {tag:'Runde 3 · ca. 3 km',title:'Trastevere &amp; Gianicolo',html:'Tiberinsel → Trastevere → hoch auf den Gianicolo. Abends hin: erst der Blick über die Dächer, dann günstig essen.',price:'kostenlos'},
+       {tag:'Runde 4 · ca. 3 km',title:'Aventin &amp; Testaccio',html:'Circus Maximus → Orangengarten → das Schlüsselloch der Malteser → Markthalle Testaccio. Die ruhigste Runde von allen.',price:'kostenlos'}
+     ]},
+
+    {type:'cards',bg:'hell',
+     title:'Kostet nichts, ist trotzdem groß',
+     sub:'Rom lässt sich erstaunlich weit umsonst anschauen. Das hier steht auf unserer Liste.',
+     items:[
+       {tag:'immer offen',title:'Die Nasoni',html:'Rund 2500 gusseiserne Trinkbrunnen sprudeln durchgehend, das Wasser ist trinkbar. Flasche mitnehmen, nie wieder Wasser kaufen.',price:'0 €'},
+       {tag:'täglich',title:'Petersdom',html:'Der Eintritt ist frei, nur die Schlange kostet Geduld. Wer hoch zur Kuppel will, zahlt extra (zu Fuß günstiger als mit Aufzug).',price:'frei · Kuppel ca. 8–10 €'},
+       {tag:'1. Sonntag im Monat',title:'Museen umsonst',html:'An jedem ersten Sonntag sind die staatlichen Museen kostenlos — Kolosseum, Forum und Palatin gehören dazu. Früh da sein.',price:'0 €'},
+       {tag:'letzter Sonntag',title:'Vatikanische Museen',html:'Am letzten Sonntag im Monat freier Eintritt, Einlass nur vormittags. Sonst rund 20 € plus Reservierung.',price:'0 € statt ca. 20 €'},
+       {tag:'jeden Mittag',title:'Der Kanonenschuss',html:'Punkt zwölf feuert auf dem Gianicolo eine Kanone. Danach hat man den besten Blick auf Rom ganz für sich.',price:'0 €'},
+       {tag:'abends',title:'Trevi ohne Menschenmassen',html:'Tagsüber steht man dort in fünfter Reihe. Spät abends oder kurz nach Sonnenaufgang gehört der Brunnen fast einem allein.',price:'0 €'}
+     ]},
+
+    {type:'tee',
+     title:'Die Dienstkleidung',
+     sub:'Unser Motto steht schon drauf, ganz ohne Diskussion: <b>Alle Wege führen zum Essen.</b>',
+     emoji:'🍕',tag:'RM',
+     motto1:'Alle Wege führen',motto2:'zum Essen.',
+     cut:'women',
+     ariaLabel:'Weißes T-Shirt mit Pizzastück und dem Aufdruck: Alle Wege führen zum Essen',
+     caption:'Weißes Baumwoll-Tee, Pizza vorne drauf. Pflichtausstattung — Nachschlag ist kein Verstoß, sondern Vorschrift.'},
 
     {type:'cards',
      title:'Wo wir schlafen',
-     sub:'Da schlafen wir nochmal drüber — hier ein paar günstige Optionen, einfach nachgeschaut, nichts gesponsert.',
+     sub:'Zwei Nächte davon verbringen wir ohnehin im Zug. Für die Tage dazwischen: einfach, sauber, zentral — selbst nachgeschaut, nichts gesponsert.',
      items:[
-       {tag:'Straßburg · 1–2 Nächte',title:'Ibis Budget / B&amp;B an der Gare',html:'Null Meter Kofferschleppen. Sozial &amp; zentral: Jugendherberge <b>CIARUS</b>.',price:'ca. 60–90 € / DZ / Nacht'},
-       {tag:'Colmar · 1 Nacht',title:'Ibis Budget Colmar Centre',html:'Fußläufig zu Altstadt &amp; Bahnhof. Morgens Turckheim, mittags Cocotte, abends Winstub.',price:'ca. 60–85 € / DZ / Nacht'},
-       {tag:'Dijon · 3–4 Nächte',title:'Ibis Budget / B&amp;B / CIS Dijon',html:'Basislager Burgund. Geheimtipp: <b>CIS Dijon</b> (Ethic Étapes) für günstige Doppelzimmer.',price:'ca. 55–85 € / DZ / Nacht'}
+       {tag:'Monti · zentral',title:'Hostel mit Doppelzimmer',html:'Zwischen Termini und Kolosseum. Alles zu Fuß erreichbar, morgens sind wir als Erste am Forum.',price:'ca. 70–100 € / DZ / Nacht'},
+       {tag:'Geheimtipp',title:'Casa per ferie',html:'Klösterliche Gästehäuser mitten in der Stadt: schlicht, ruhig, oft mit Dachterrasse. Manche haben eine Sperrstunde — vorher fragen.',price:'ca. 60–90 € / DZ / Nacht'},
+       {tag:'Trastevere',title:'Kleines B&amp;B über dem Fluss',html:'Abends das beste Viertel vor der Tür, morgens 25 Minuten Fußweg ins Zentrum. Lauter, dafür lebendiger.',price:'ca. 80–110 € / DZ / Nacht'}
      ]},
 
-    {type:'tee',bg:'hell',
-     title:'Die Dienstkleidung',
-     sub:'Unser Motto steht schon drauf, ganz ohne Diskussion: <b>Essen bis zum Umfallen.</b>',
-     emoji:'🥐',tag:'UT',
-     motto1:'Essen bis zum',motto2:'Umfallen.',
-     cut:'women',                    // 'women' | 'unisex' · d3:false = flaches SVG
-     ariaLabel:'Weißes T-Shirt mit Croissant und dem Aufdruck: Essen bis zum Umfallen',
-     caption:'Weißes Baumwoll-Tee, Croissant vorne drauf. Pflichtausstattung — Nachschlag ist kein Verstoß, sondern Vorschrift.'},
-
-    {type:'cards',
-     title:'Bonus-Runde: was noch geht',
-     sub:'Kein Muss, nur Ideen, falls noch Zeit &amp; Rucksackplatz übrig ist.',
+    {type:'cards',bg:'hell',
+     title:'Plan B: ohne Nachtzug',
+     sub:'Der Nachtzug fährt nicht jeden Tag und die Sparschiene ist schnell weg. Dann geht es tagsüber — länger unterwegs, ähnlich günstig.',
      items:[
-       {tag:'Marcigny · optional',title:'Emile Henry Werksverkauf',html:'Keramik-König seit 1850, −35 bis −40 %. <b>Di &amp; So geschlossen!</b>',price:'Bus + TER · ~25 € extra'},
-       {tag:'Bresse · optional',title:'Beurre de Bresse AOP',html:'Eine von nur drei Butter-AOPs Frankreichs — traditionell gebuttert, butterblumengelb. Abstecher via Chalon-sur-Saône.',price:'TER-Abstecher · Tagestrip'}
+       {tag:'Vormittag',title:'München → Bologna',html:'EuroCity über den Brenner, rund 7 Stunden mit Blick auf die Dolomiten. Sparschiene rechtzeitig buchen.',price:'ab ca. 29,90 €'},
+       {tag:'Nachmittag',title:'Bologna → Rom',html:'Frecciarossa oder Italo, gut zwei Stunden. Wer flexibel ist, fährt in der Nebenzeit deutlich billiger.',price:'ab ca. 19,90 €'}
      ]}
   ],
 
@@ -215,14 +220,14 @@ SB.trip={
     title:'Kommst du mit?',
     text:'Ein Klick, und ich schreib dir direkt eine Mail dazu. Den Rest besprechen wir dann in echt.',
     buttons:['Ja','Sehr gerne'],
-    done:'Mail ist offen — einfach abschicken. Croissants merk ich mir.',
-    fine:'Der Rosmarin reist trotzdem im Handgepäck. Frag mich einfach, warum.',
-    mailSubject:'Schlemmer Bahn SB 143',
+    done:'Mail ist offen — einfach abschicken. Die Blasenpflaster nehm ich mit.',
+    fine:'Bequeme Schuhe sind keine Empfehlung, sondern Voraussetzung. Frag mich einfach, warum.',
+    mailSubject:'Dolce Vita Express DV 294',
     mailBody:'Ich bin dabei.',
-    crumbs:['🥐','🌿','🧈','🥖','🍲','🧃','🥐','🌿']
+    crumbs:['🍕','🍝','🍦','☕','🍋','🏛️','🍕','🍦']
   },
 
-  footer:'Kartendaten © OpenStreetMap-Mitwirkende, © CARTO · Höhendaten: AWS Terrain Tiles · Musik: „La vie en rose" — Zaz (via YouTube) · Preise ca., Stand Sommer 2026.<br>Alles selbst zusammengesucht. Keine Werbung, kein Sponsoring — nur ich. · <b>Croissant du matin, tout va bien.</b>'
+  footer:'Kartendaten © OpenStreetMap-Mitwirkende, © CARTO · Höhendaten: AWS Terrain Tiles · Musik über YouTube · Preise und Fahrpläne ca., Stand Sommer 2026 — vor dem Buchen bitte gegenprüfen.<br>Alles selbst zusammengesucht. Keine Werbung, kein Sponsoring — nur ich. · <b>Tutte le strade portano a Roma.</b>'
 };
 
 SB.prepareTrip();
