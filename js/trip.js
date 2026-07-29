@@ -87,17 +87,20 @@ SB.trip={
   },
 
   /* Musik am Meilenstein. Weglassen (music:null) = Trip ohne Musik.
-     triggerScene: ab dieser Szene erscheint der ♪-Knopf.
+     triggerScene: ab dieser Szene startet der Titel.
      gate:false = ohne Dialog, damit die Fahrt an der Grenze nicht stehen
-     bleibt; stattdessen nur der Hinweis unten. Ton startet dann per Klick
-     auf ♪ (ohne echte Geste lässt kein Browser Ton zu). */
+     bleibt. autostart:true = der Titel legt am Meilenstein von selbst los;
+     lässt der Browser noch keinen Ton zu, läuft er stumm weiter und wird bei
+     der nächsten Berührung irgendwo auf der Seite aufgedreht (der Hinweis
+     unten sagt das). Ein Druck auf ♪ ist nirgends nötig. */
   music:{
     ytId:'6A_lOwSnS8c',          // Zaz — „La vie en rose"
     label:'La vie en rose — Zaz',
     volume:65,
     triggerScene:3,              // Szene „Über den Rhein: Straßburg"
     gate:false,
-    hint:'🇫🇷 Rhein überquert — ♪ oben antippen für „La vie en rose".'
+    autostart:true,
+    hint:'🇫🇷 Rhein überquert — „La vie en rose" läuft. Einmal tippen, falls du nichts hörst.'
   },
 
   /* Szenen der Kartenfahrt.

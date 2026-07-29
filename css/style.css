@@ -157,6 +157,11 @@ footer b{color:#fff}
   border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;font-size:1rem;line-height:1;
   cursor:pointer;font-family:inherit;flex:0 0 auto;transition:background .15s,color .15s}
 #musicbtn.on{background:#fff;color:var(--rot)}
+/* Läuft stumm und wartet auf die erste Berührung — sanft pulsierend, damit
+   klar ist, dass da noch Ton kommt. */
+#musicbtn.wait{animation:mbpuls 1.6s ease-in-out infinite}
+@keyframes mbpuls{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.5)}50%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
+@media (prefers-reduced-motion: reduce){#musicbtn.wait{animation:none;background:rgba(255,255,255,.4)}}
 #toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-14px);z-index:1300;
   background:rgba(27,31,38,.92);color:#fff;font-size:.8rem;font-weight:800;padding:8px 16px;border-radius:999px;
   opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap}
