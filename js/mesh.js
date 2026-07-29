@@ -615,6 +615,10 @@ function program(gl){
     tex:gl.getUniformLocation(p,'u_tex')};
 }
 var STRIDE=11*4;
+/* Ein einziger Zwischenspeicher für die Matrix. Vorher entstand pro Zeichnung
+   ein neues Float32Array — bei vier Wagen sind das 240 Wegwerf-Objekte je
+   Sekunde, die der Aufräumer mitten in der Fahrt einsammeln muss. */
+var MTMP=new Float32Array(16);
 /* Zeichnet ein Mesh. Alle GL-Zustände werden hier gesetzt — der Aufrufer
    (MapLibre-Custom-Layer!) muss sie danach ggf. wieder aufräumen.
    opt: {tex, amb, spec}                                                   */
@@ -626,7 +630,8 @@ function draw(gl,P,buf,count,matrix,light,opt){
   gl.enableVertexAttribArray(P.norm);gl.vertexAttribPointer(P.norm,3,gl.FLOAT,false,STRIDE,12);
   gl.enableVertexAttribArray(P.col);gl.vertexAttribPointer(P.col,3,gl.FLOAT,false,STRIDE,24);
   gl.enableVertexAttribArray(P.uv);gl.vertexAttribPointer(P.uv,2,gl.FLOAT,false,STRIDE,36);
-  gl.uniformMatrix4fv(P.matrix,false,new Float32Array(matrix));
+  MTMP.set(matrix);
+  gl.uniformMatrix4fv(P.matrix,false,MTMP);
   gl.uniform3f(P.light,light[0],light[1],light[2]);
   gl.uniform1f(P.amb,opt.amb===undefined?0.58:opt.amb);
   gl.uniform1f(P.spec,opt.spec===undefined?0.12:opt.spec);

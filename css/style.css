@@ -17,7 +17,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
 /* ---- Topbar -------------------------------------------------------------- */
 #topbar{position:fixed;top:0;left:0;right:0;z-index:1200;display:flex;align-items:center;gap:12px;
   padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 10px calc(16px + env(safe-area-inset-left));
-  background:rgba(236,0,22,.92);backdrop-filter:blur(10px);color:#fff}
+  background:rgba(236,0,22,.92);color:#fff}
+/* Kein backdrop-filter: bei 92 % Deckkraft sieht man vom Blur ohnehin nichts —
+   der Browser hätte aber bei JEDEM Bild der Kartenfahrt den Streifen darunter
+   neu weichgezeichnet. Auf Phones war er schon länger aus. */
 .logo{background:#fff;color:var(--rot);font-weight:900;font-style:italic;font-size:1.15rem;padding:1px 10px;border-radius:4px;
   cursor:pointer;user-select:none}
 #topbar .cl{font-size:.72rem;opacity:.95;flex:1}
@@ -43,6 +46,10 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
 @keyframes up{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
 .floaty{position:absolute;font-size:1.6rem;opacity:.5;animation:drift linear infinite;pointer-events:none}
+/* Endlos-Animationen laufen auch weiter, wenn niemand hinschaut — der
+   Compositor tickt sie trotzdem in jedem Bild. js/ui.js setzt .ruht, sobald
+   Hero bzw. RSVP aus dem Bild sind (also während der ganzen Kartenfahrt). */
+.ruht .floaty{animation-play-state:paused}
 @keyframes drift{0%{transform:translateY(8vh) rotate(-8deg)}100%{transform:translateY(-110vh) rotate(14deg)}}
 
 /* ---- Scrolly / Karte ------------------------------------------------------ */
@@ -73,7 +80,14 @@ body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:var(--ink);l
    Handschrift (Caveat) in Füller-Tinte, mit Klebestreifen oben drauf.          */
 .scard{position:absolute;left:24px;bottom:56px;max-width:560px;z-index:7;
   background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-radius:22px;padding:26px 28px;
-  box-shadow:0 24px 70px rgba(0,0,0,.32);opacity:0;transform:translateY(34px);pointer-events:none;will-change:opacity,transform}
+  box-shadow:0 24px 70px rgba(0,0,0,.32);opacity:0;transform:translateY(34px);pointer-events:none;
+  visibility:hidden}
+/* Sichtbar ist immer nur EINE Karte (js/story.js setzt .live beim Szenen-
+   wechsel). Die anderen neun bleiben visibility:hidden — sonst hält der
+   Browser für jede eine eigene Compositing-Ebene mit Blur vor, obwohl sie
+   auf Deckkraft 0 steht. will-change gilt aus demselben Grund nur für die
+   Karte, die sich gerade wirklich bewegt. */
+.scard.live{visibility:visible;will-change:opacity,transform}
 .scard::before{content:'';position:absolute;top:-12px;left:50%;width:96px;height:24px;
   transform:translateX(-50%) rotate(-3deg);background:rgba(255,216,0,.45);
   border-left:1px dashed rgba(0,0,0,.08);border-right:1px dashed rgba(0,0,0,.08);border-radius:2px}
@@ -143,6 +157,11 @@ footer b{color:#fff}
   border:1.5px solid rgba(255,255,255,.6);background:rgba(255,255,255,.16);color:#fff;font-size:1rem;line-height:1;
   cursor:pointer;font-family:inherit;flex:0 0 auto;transition:background .15s,color .15s}
 #musicbtn.on{background:#fff;color:var(--rot)}
+/* Läuft stumm und wartet auf die erste Berührung — sanft pulsierend, damit
+   klar ist, dass da noch Ton kommt. */
+#musicbtn.wait{animation:mbpuls 1.6s ease-in-out infinite}
+@keyframes mbpuls{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.5)}50%{box-shadow:0 0 0 7px rgba(255,255,255,0)}}
+@media (prefers-reduced-motion: reduce){#musicbtn.wait{animation:none;background:rgba(255,255,255,.4)}}
 #toast{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top));transform:translate(-50%,-14px);z-index:1300;
   background:rgba(27,31,38,.92);color:#fff;font-size:.8rem;font-weight:800;padding:8px 16px;border-radius:999px;
   opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;white-space:nowrap}
@@ -178,6 +197,56 @@ footer b{color:#fff}
 .tee .teetxt{font-family:Georgia,'Times New Roman',serif;fill:var(--ink);font-weight:600;font-size:21px}
 .teecap{margin-top:16px;font-size:.82rem;color:var(--grau);font-weight:600}
 
+/* ---- Zuckerdose (marschiert vor dem RSVP über den Tisch) --------------------
+   Look: altes Zeichentrick-Cel. Gemalter, stillstehender Hintergrund, darüber
+   flach kolorierte Figuren mit Tuschekontur, einer Schattenfläche und einem
+   Glanzlicht — plus Vignette und Filmkorn. Bewegt wird per transform-Attribut
+   in js/zucker.js, mit 12 Zeichnungen pro Sekunde („auf Zweien").            */
+.zuckerblock{background:linear-gradient(180deg,#fff 0%,#F4F1EE 100%);overflow:hidden;padding-top:48px}
+#zuckerbuehne{max-width:760px;margin:0 auto;cursor:pointer;user-select:none;-webkit-user-select:none}
+#zuckersvg{width:100%;height:auto;display:block;border-radius:10px;
+  box-shadow:0 22px 50px rgba(27,31,38,.34),0 0 0 1px rgba(27,31,38,.25)}
+
+/* Gemalte Kulisse */
+.zk-wand{fill:url(#zkWand)}
+.zk-schrank{fill:#332F23;opacity:.75}
+.zk-schrankhell{fill:#6A6047;opacity:.5}
+.zk-fuge{fill:none;stroke:#241F16;stroke-width:2.5;opacity:.55;stroke-linecap:round}
+.zk-pinsel{fill:none;stroke:#8E8261;stroke-width:5;opacity:.18;stroke-linecap:round}
+.zk-pinsel.hell{stroke:#fff;opacity:.22;stroke-width:4}
+.zk-platte{fill:url(#zkPlatte)}
+.zk-plattenlicht{fill:none;stroke:#FFFCF3;stroke-width:3;opacity:.5}
+.zk-vignette{fill:url(#zkVignette);pointer-events:none}
+.zk-korn{opacity:.16;mix-blend-mode:overlay;pointer-events:none}
+
+/* Cel-Figuren: Tuschelinie, flache Farbe, eine Schattenfläche, ein Glanz.
+   Farben nach den Filmbildern: mattes Porzellanblau, fast schwarze Kontur,
+   der Henkel als helle Schnecke auf dem Bauch, Löffel in Blauviolett.       */
+.zk-schlagschatten{fill:rgba(42,36,22,.34)}   /* Deckkraft steuert JS über das opacity-Attribut */
+.zk-keramik{fill:#7FBAD2;stroke:#131C24;stroke-width:3.8;stroke-linejoin:round;stroke-linecap:round}
+.zk-ton{fill:#5C9BB6;opacity:.9}
+.zk-locke{fill:none;stroke:#A9D8E6;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+.zk-glanzflaeche{fill:#B9E0EE;opacity:.75}
+.zk-innen{fill:#2C6580;stroke:#131C24;stroke-width:3.6}
+.zk-ring{fill:none;stroke:#5C9BB6;stroke-width:2.2}
+.zk-randlinie{fill:none;stroke:#131C24;stroke-width:3.6}
+.zk-henkel-um{fill:none;stroke:#131C24;stroke-width:14;stroke-linecap:round}
+.zk-henkel{fill:none;stroke:#7FBAD2;stroke-width:7;stroke-linecap:round}
+.zk-stiel-um{fill:none;stroke:#131C24;stroke-width:7.5;stroke-linecap:round}
+.zk-stiel{fill:none;stroke:#8E93C8;stroke-width:3.4;stroke-linecap:round}
+.zk-arm-um{fill:none;stroke:#131C24;stroke-width:8.5;stroke-linecap:round}
+.zk-arm{fill:none;stroke:#7FBAD2;stroke-width:4.5;stroke-linecap:round}
+.zk-hand{fill:#A9D8E6;stroke:#131C24;stroke-width:2.6}
+.zk-loeffelkopf{fill:#6C74B4;stroke:#131C24;stroke-width:3.2;stroke-linejoin:round}
+.zk-loeffelglanz{fill:none;stroke:#A6ABDC;stroke-width:2;stroke-linecap:round;opacity:.9}
+.zk-fuellung{fill:#FDFBF2;stroke:#131C24;stroke-width:2.4;stroke-linejoin:round}
+.zk-flaeche{fill:#FFFEF8;stroke:#131C24;stroke-width:2.4}
+.zk-zuckerton{fill:#DDDCCB;opacity:.9}
+.zk-korn-zucker{fill:#FFFDF4;stroke:#131C24;stroke-width:.9}
+.zk-krumel{fill:none;stroke:#C9C7B4;stroke-width:1.5}
+.zk-funke{fill:#FFF3B0}
+.zk-cap{margin-top:12px;text-align:center;font-family:'Caveat',cursive;color:var(--tinte);font-size:1.5rem;line-height:1.2;min-height:1.3em}
+
 /* ---- Mobile ------------------------------------------------------------------
    backdrop-filter:blur() über einer bewegten Karte ist DIE Ruckel-Ursache auf
    Smartphones – hier bekommt jede geblurrte Fläche eine (fast) deckende Füllung. */
@@ -211,6 +280,9 @@ footer b{color:#fff}
   #rsvp{padding:72px 18px 96px}
   .btnrow{width:100%}
   button.rot{width:100%;max-width:340px;padding:16px 24px}
+  #zuckersvg{border-radius:8px}
+  .zk-korn{display:none}      /* Filmkorn ist auf kleinen Displays nur Rechenlast */
+  .zk-cap{font-size:1.25rem;margin-top:9px}
 }
 
 /* ---- Reduced Motion ---------------------------------------------------------- */

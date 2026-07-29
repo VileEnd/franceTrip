@@ -1,21 +1,30 @@
 /* ==========================================================================
    Engine – Musik am Meilenstein (optional)
-   Liest trip.music: { ytId, label, volume, triggerScene, hint,
+   Liest trip.music: { ytId, label, volume, triggerScene, hint, autostart,
    gate:false | {flag,title,text,go,skip} }. Fehlt trip.music, tut dieses
    Modul nichts (SB.music=null) und der ♪-Knopf bleibt unsichtbar — der Trip
    funktioniert ohne Musik.
 
-   Warum überhaupt eine Geste? Browser erlauben unmutierten Ton nur nach
-   einer echten Geste, und beim eingebetteten YouTube-Player (Ton läuft im
-   iFrame, per postMessage gesteuert) verlangen manche Browser den
-   play()-Aufruf synchron IM Klick-Handler. Ein Klick auf einen sichtbaren
-   Button ist der einzige Weg, der überall zuverlässig funktioniert. Danach
-   wird die Lautstärke sanft von 0 hochgefadet.
+   Warum ist Ton überhaupt kompliziert? Browser lassen HÖRBAREN Ton nur zu,
+   wenn die Seite schon einmal berührt wurde („user activation": Klick, Tipp,
+   Tastendruck — Scrollen und Mausrad zählen ausdrücklich NICHT). Stummer Ton
+   dagegen ist immer erlaubt.
 
-   Zwei Wege dorthin: `gate:{…}` legt am Meilenstein einen Dialog vor
+   Daraus wird der Startweg (autostart, Standard: an):
+   1. Am Meilenstein versuchen wir es direkt hörbar: unMute + play, Lautstärke
+      von 0 hochgefadet. Auf jeder Seite, die vorher schon eine echte Geste
+      gesehen hat (fast immer: der erste Tipp/Klick), klappt genau das.
+   2. Kurz danach prüfen wir nach, ob wirklich hörbar gespielt wird. Wenn der
+      Browser blockt, läuft der Titel STUMM weiter (immer erlaubt) — es fehlt
+      dann nur noch das Aufdrehen.
+   3. Dieses Aufdrehen passiert bei der nächsten Geste IRGENDWO auf der Seite,
+      nicht erst beim Druck auf ♪. Ein Knopfdruck ist also nirgends nötig, der
+      ♪-Knopf bleibt nur als Aus-/Ein-Schalter.
+
+   Zwei Wege zum Meilenstein: `gate:{…}` legt dort einen Dialog vor
    (#francegate, hier dynamisch erzeugt) und hält so lange Autopilot und
-   Scrollen an. `gate:false` unterbricht die Fahrt nicht — dann taucht nur
-   der ♪-Knopf auf, dazu ein kurzer Hinweis (`hint`).
+   Scrollen an. `gate:false` unterbricht die Fahrt nicht — dann startet der
+   Titel von selbst (siehe oben), dazu ein kurzer Hinweis (`hint`).
    ========================================================================== */
 (function(){
 'use strict';
@@ -25,6 +34,7 @@ var musicbtn=document.getElementById('musicbtn');
 if(!M){SB.music=null;return;}
 
 var TARGET_VOL=M.volume||65;
+var AUTOSTART=(M.autostart!==false);
 if(musicbtn){
   musicbtn.title=M.label||'Musik';
   musicbtn.setAttribute('aria-label','Musik an/aus: '+(M.label||''));
@@ -32,7 +42,12 @@ if(musicbtn){
 
 var ytPlayer=null,ytReady=false,apiRequested=false;
 var wantMusic=false,hit=false,playing=false,pendingPlay=false;
-var fadeTimer=null;
+var userOff=false;              // ♪ ausdrücklich ausgeschaltet → nichts mehr von selbst
+var fadeTimer=null,checkTimer=null,checkTries=0;
+
+function isMuted(){try{return ytPlayer.isMuted();}catch(e){return true;}}
+function state(){try{return ytPlayer.getPlayerState();}catch(e){return -1;}}
+function audible(){return playing&&!isMuted();}
 
 /* Lautstärke in kleinen Schritten auf `to` bringen statt hart zu springen. */
 function fadeVolume(to,ms){
@@ -61,7 +76,7 @@ window.onYouTubeIframeAPIReady=function(){
     events:{
       onReady:function(){
         ytReady=true;
-        if(pendingPlay){pendingPlay=false;startWithFadeIn();}
+        if(pendingPlay){pendingPlay=false;startWithFadeIn();prueferStarten();}
       },
       onStateChange:function(e){
         playing=(e.data===1);   // 1 = PLAYING
@@ -69,43 +84,118 @@ window.onYouTubeIframeAPIReady=function(){
       }
     }});
 };
-/* Player so früh wie möglich laden, damit er beim Dialog schon bereitsteht. */
+/* Player früh laden, damit er am Meilenstein bereitsteht — aber nicht MITTEN
+   im Start. Das YouTube-Skript zieht einen kompletten Player samt iFrame nach
+   und ist damit das größte Paket der Seite; die erste Geste ist meistens der
+   erste Scroll, also genau der Moment, in dem die Karte ihre Kacheln holt und
+   der Zug anfährt. Deshalb erst in einer Leerlaufpause danach (spätestens
+   nach dem Timeout), und am Meilenstein notfalls sofort.                   */
+function ladePlanen(){
+  if(window.requestIdleCallback)requestIdleCallback(loadAPI,{timeout:6000});
+  else setTimeout(loadAPI,2500);
+}
 ['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
-  window.addEventListener(ev,loadAPI,{passive:true,once:true});
+  window.addEventListener(ev,ladePlanen,{passive:true,once:true});
 });
+/* Ohne Autostart reicht die Geste oben als Auslöser — mit Autostart muss der
+   Player auch dann stehen, wenn nie jemand tippt (Autopilot fährt allein). */
+if(AUTOSTART)window.addEventListener('load',function(){setTimeout(ladePlanen,4000);});
 
 function setUI(){
   if(!musicbtn)return;
-  musicbtn.classList.toggle('on',playing);
-  musicbtn.setAttribute('aria-pressed',playing?'true':'false');
+  var an=audible();
+  musicbtn.classList.toggle('on',an);
+  musicbtn.classList.toggle('wait',playing&&!an);   // läuft stumm, wartet auf Geste
+  musicbtn.setAttribute('aria-pressed',an?'true':'false');
 }
 
-/* Direkt aus einem echten Klick-Handler aufrufen — nur dann ist der Ton in
-   jedem Browser garantiert erlaubt. Startet bei Lautstärke 0 und blendet auf. */
+/* Direkt aus einem echten Klick-Handler aufrufen — dann ist der Ton in jedem
+   Browser garantiert erlaubt. Startet bei Lautstärke 0 und blendet auf. */
 function startWithFadeIn(){
-  wantMusic=true;
+  wantMusic=true;userOff=false;
   if(!ytReady){pendingPlay=true;loadAPI();return;}
   try{ytPlayer.unMute();ytPlayer.setVolume(0);ytPlayer.playVideo();}catch(e){}
   fadeVolume(TARGET_VOL,2600);
+  setUI();
 }
 function pause(){
-  wantMusic=false;
-  clearInterval(fadeTimer);
+  wantMusic=false;userOff=true;
+  clearInterval(fadeTimer);clearTimeout(checkTimer);
+  gesteWiederAbmelden();
   try{ytPlayer&&ytPlayer.pauseVideo();}catch(e){}
 }
-function resumeWithFadeIn(){
-  if(!ytReady)return;
+
+/* ---- Autostart: erst hörbar versuchen, sonst stumm laufen lassen -------------
+   Schritt 1 ist derselbe Aufruf wie beim Knopfdruck. Schritt 2 schaut nach,
+   ob daraus wirklich Ton wurde: `getPlayerState()===1` UND nicht stumm. Ein
+   blockierter Start sieht anders aus (unstarted/paused oder vom Player selbst
+   stummgeschaltet) — dann übernimmt der stille Weg.                        */
+function autoStart(){
+  if(userOff)return;
+  startWithFadeIn();
+  if(!ytReady)return;            // onReady spielt nach, prueferStarten folgt dort
+  prueferStarten();
+}
+function prueferStarten(){
+  clearTimeout(checkTimer);checkTries=0;
+  checkTimer=setTimeout(pruefen,1400);
+}
+function pruefen(){
+  if(userOff)return;
+  var st=state();
+  if(st===1&&!isMuted()){setUI();return;}           // läuft hörbar — fertig
+  if((st===3||st===-1)&&++checkTries<3){            // puffert noch → nochmal schauen
+    checkTimer=setTimeout(pruefen,1400);return;
+  }
+  stummWeiterlaufen();
+}
+/* Blockiert: stumm ist immer erlaubt. Der Titel läuft also los, und es fehlt
+   nur noch das Aufdrehen — das übernimmt die nächste Geste irgendwo auf der
+   Seite. Scrollen/Mausrad zählen dabei nicht als Geste, deshalb stehen hier
+   nur die Ereignisse, die der Browser wirklich als Berührung wertet.      */
+var hinweisGezeigt=false;
+function stummWeiterlaufen(){
   wantMusic=true;
-  try{ytPlayer.playVideo();}catch(e){}
-  fadeVolume(TARGET_VOL,1800);
+  clearInterval(fadeTimer);
+  try{ytPlayer.mute();ytPlayer.playVideo();}catch(e){}
+  gesteAbwarten();
+  setUI();
+  if(!hinweisGezeigt&&SB.showToast){
+    hinweisGezeigt=true;
+    SB.showToast(M.hint||('♪ '+(M.label||'Musik')+' — tippe kurz, dann läuft sie.'));
+  }
 }
 
-/* ---- Am Meilenstein: Dialog ODER stiller Hinweis -----------------------------
-   Der Dialog ist der zuverlässige Weg, den Ton freizugeben — er hält dafür
-   aber die ganze Fahrt an. `gate:false` lässt ihn weg: dann erscheint nur
-   der ♪-Knopf plus ein kurzer Hinweis, und der Ton startet erst, wenn man
-   ihn drückt. Ohne echte Geste lässt kein Browser Ton zu, das bleibt so —
-   ohne Dialog wird das Anschalten also freiwillig statt vorgelegt.          */
+/* Nur Ereignisse, die der Browser als echte Berührung wertet. Scrollen und
+   Mausrad fehlen hier mit Absicht: sie zählen nicht als Geste. Wertet der
+   Browser eine davon doch nicht (z. B. ein touchend, aus dem ein Scroll
+   wurde), fällt der Prüfer unten wieder auf „stumm weiter" zurück und
+   meldet sich erneut an — der nächste Griff versucht es dann noch mal.   */
+var GESTEN=['pointerdown','touchend','keydown','click'];
+function ersteGeste(e){
+  /* Griffe auf die Bedienelemente überlassen wir deren eigenen Handlern.
+     Sonst würde dieser Lauscher (Capture-Phase, also VOR dem Knopf) den Ton
+     erst aufdrehen — und der ♪-Knopf sähe danach „läuft hörbar" und würde
+     ihn sofort wieder ausschalten. Ein Klick auf ♪ täte dann nichts.     */
+  var t=e&&e.target;
+  if(t&&t.nodeType===1&&t.closest&&t.closest('#musicbtn,#francegate'))return;
+  gesteWiederAbmelden();
+  if(userOff)return;
+  startWithFadeIn();
+  if(ytReady)prueferStarten();
+}
+function gesteAbwarten(){
+  GESTEN.forEach(function(ev){window.addEventListener(ev,ersteGeste,{capture:true,passive:true});});
+}
+function gesteWiederAbmelden(){
+  GESTEN.forEach(function(ev){window.removeEventListener(ev,ersteGeste,{capture:true});});
+}
+
+/* ---- Am Meilenstein: Dialog ODER Autostart -----------------------------------
+   Der Dialog ist der ausdrückliche Weg, den Ton freizugeben — er hält dafür
+   aber die ganze Fahrt an. `gate:false` lässt ihn weg: dann startet der Titel
+   von selbst (hörbar, wenn der Browser es zulässt; sonst stumm, bis die
+   nächste Berührung ihn aufdreht).                                        */
 /* Nur ein AUSDRÜCKLICHES gate:false schaltet den Dialog ab — ein Trip, der
    das Feld einfach weglässt, bekommt weiter den alten Standard (Dialog mit
    Standardtexten). So bricht die Änderung keine bestehenden Trips.        */
@@ -154,7 +244,7 @@ if(G){
     SB.autopilot&&SB.autopilot.hold(false);
   };
   gateGo.addEventListener('click',function(){closeGate();startWithFadeIn();});
-  gateSkip.addEventListener('click',closeGate);
+  gateSkip.addEventListener('click',function(){userOff=true;closeGate();});
   gate.addEventListener('click',function(e){if(e.target===gate)closeGate();});  // Backdrop
   gate.addEventListener('keydown',function(e){if(e.key==='Escape')closeGate();});
 }
@@ -164,21 +254,24 @@ SB.music={
   onScene:function(si){
     if(hit||si<M.triggerScene)return;
     hit=true;
+    loadAPI();                        // ab hier kann jederzeit geklickt werden
     if(musicbtn)musicbtn.style.display='inline-flex';
-    if(openGate)openGate();
+    if(openGate){openGate();return;}
+    if(AUTOSTART)autoStart();
     else if(SB.showToast)SB.showToast(M.hint||('♪ '+(M.label||'Musik')+' — oben antippen.'));
   }
 };
 
-/* Der ♪-Button: mit Dialog nur Pause/Weiter — ohne Dialog (gate:false) ist
-   er der EINZIGE Startweg. Deshalb über startWithFadeIn(): das merkt sich
-   den Wunsch (pendingPlay), falls der Player noch lädt, und spielt dann
-   von selbst los, statt den Klick zu verschlucken.                        */
+/* Der ♪-Button ist nur noch Schalter, kein Startknopf: hörbar → aus, sonst
+   an. Über startWithFadeIn(), das sich den Wunsch merkt (pendingPlay), falls
+   der Player noch lädt, statt den Klick zu verschlucken.                  */
 if(musicbtn){
   musicbtn.addEventListener('click',function(){
-    if(playing){pause();return;}
+    if(audible()){pause();return;}
+    gesteWiederAbmelden();            // dieser Klick IST die Geste
     if(!ytReady&&SB.showToast)SB.showToast('♪ Musik lädt …');
     startWithFadeIn();
+    if(ytReady)prueferStarten();
   });
 }
 })();
