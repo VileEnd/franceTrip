@@ -28,7 +28,7 @@ Fertig. Alles andere (`js/core|mesh|ui|map|music|story|tee3d.js`,
 | `js/mesh.js`   | 3D-Werkzeugkasten: Grundkörper, Modelle & Shader (Fahrzeug **und** T-Shirt) |
 | `js/ui.js`     | Rendert alles aus den Trip-Daten: Hero, Karten, Inhaltsblöcke, RSVP, Footer |
 | `js/map.js`    | MapLibre-Karte: Route, Halte, Zug-Icon, 3D-Gelände |
-| `js/music.js`  | Musik am Meilenstein inkl. Dialog — überspringt sich selbst, wenn der Trip keine Musik hat |
+| `js/music.js`  | Musik am Meilenstein: Autostart ohne Knopfdruck (oder Dialog) — überspringt sich selbst, wenn der Trip keine Musik hat |
 | `js/story.js`  | Scroll-Steuerung: geglätteter Render-Loop + Autopilot |
 | `js/tee3d.js`  | Macht aus dem T-Shirt-Abschnitt ein drehendes 3D-Modell (SVG bleibt Rückfallebene) |
 | `js/teapot.js` | Marschierende Teekanne (Ladeanzeige der Karte & Seitenende) |
@@ -107,9 +107,10 @@ SB.trip = {
     ytId:'…',                          // YouTube-Video-ID
     label:'La vie en rose — Zaz',      // ♪-Button-Tooltip
     volume: 65,
-    triggerScene: 3,                   // ab dieser Szene erscheint der ♪-Knopf
+    triggerScene: 3,                   // ab dieser Szene startet der Titel
     gate: false,                       // false = ohne Dialog (Fahrt läuft weiter)
-    hint: '🇫🇷 … ♪ oben antippen.',     // Hinweis statt Dialog
+    autostart: true,                   // Standard: an — startet ohne Knopfdruck
+    hint: '🇫🇷 … läuft. Einmal tippen.',// Hinweis statt Dialog
     // gate:{flag,title,text,go,skip}  = Dialog, hält Autopilot & Scrollen an
   },
 
@@ -324,9 +325,18 @@ Zwei Einstellungen im Repository, falls der erste Lauf hakt:
 
 ## Technische Notizen
 
-- **Autoplay:** Browser erlauben Ton nur nach echter Geste — deshalb der
-  Dialog am Musik-Meilenstein (Klick auf sichtbaren Button = überall
-  zuverlässig). Lautstärke wird sanft von 0 hochgefadet.
+- **Autoplay:** Browser erlauben *hörbaren* Ton nur, wenn die Seite schon
+  einmal berührt wurde (Klick, Tipp, Taste — Scrollen und Mausrad zählen
+  ausdrücklich **nicht**); *stummer* Ton ist dagegen immer erlaubt. Daraus
+  besteht der Startweg in `js/music.js` (`autostart`, Standard an): am
+  Meilenstein wird direkt hörbar gestartet, ~1,4 s später prüft der Code per
+  `getPlayerState()`/`isMuted()` nach. Kam kein Ton durch, läuft der Titel
+  **stumm** weiter, der ♪-Knopf pulsiert, und die nächste Berührung
+  *irgendwo* auf der Seite dreht ihn auf — ein Druck auf ♪ ist nie nötig.
+  Klappt auch das nicht, meldet sich der Prüfer erneut an und versucht es
+  beim nächsten Griff wieder. Lautstärke wird immer sanft von 0 hochgefadet.
+  Mit `gate:{…}` gibt es statt Autostart weiter den Dialog, der Autopilot und
+  Scrollen anhält, bis geklickt wurde.
 - **Flüssige Fahrt:** Autopilot, Glättung und Zeichnen laufen in *einer*
   `requestAnimationFrame`-Schleife (`js/story.js`). Vorher rief eine zweite
   Schleife das Zeichnen erst auf das Scroll-Ereignis hin auf — wann das
