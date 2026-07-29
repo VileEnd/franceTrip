@@ -127,7 +127,8 @@ tr.summe td{border-top:3px double var(--ink);border-bottom:none;font-weight:900;
 .sparpreis{display:inline-block;background:var(--gelb);border-radius:4px;font-size:.66rem;font-weight:900;padding:2px 7px;margin-left:6px}
 .budgetbar{margin-top:16px;background:var(--hell);border-radius:999px;height:28px;position:relative;overflow:hidden}
 .budgetbar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--gruen);border-radius:999px}   /* Breite kommt aus trip.js (budget.pct) */
-.budgetbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900}
+.budgetbar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900;
+  padding:0 10px;text-align:center;text-shadow:0 1px 2px rgba(255,255,255,.95),0 0 7px rgba(255,255,255,.85)}
 .hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
 .hcard{background:#fff;border:1.5px solid var(--linie);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(27,31,38,.06)}
 .hcard .ort{font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--rot);font-weight:900}

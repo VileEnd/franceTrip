@@ -494,19 +494,42 @@ function tee(C){
   /* Schulterpartie: vom oberen Rumpfring zum Halsausschnitt, der vorn
      tiefer sitzt — das macht den runden Damen-Ausschnitt.                */
   var NRX=women?0.100:0.106,NRZ=women?0.064:0.068;
-  ring(v,function(v2){return shell(SHO,v2*Math.PI*2);},
-    function(v2){
-      var a=v2*Math.PI*2,s=Math.sin(a);
-      return [NRX*Math.cos(a),SHO+0.046-(women?0.062:0.042)*Math.max(0,s),NRZ*s];
-    },seg(8),seg(44),function(u){return u>0.82?trim:cloth;},{flip:true});
+  function neck(v2){
+    var a=v2*Math.PI*2,s=Math.sin(a);
+    return [NRX*Math.cos(a),SHO+0.046-(women?0.062:0.042)*Math.max(0,s),NRZ*s];
+  }
+  ring(v,function(v2){return shell(SHO,v2*Math.PI*2);},neck,
+       seg(8),seg(44),function(u){return u>0.82?trim:cloth;},{flip:true});
 
-  /* Cap-Sleeves: kurzes, nach außen unten laufendes Rohr. */
+  /* Halsbündchen: die Kante rollt sich nach innen ein. Ohne das schaut man
+     auf eine rohe Schnittkante und sieht ins Hemd hinein.                 */
+  ring(v,neck,function(v2){var p=neck(v2);return [p[0]*0.88,p[1]-0.013,p[2]*0.88];},
+       2,seg(44),function(){return trim;});
+  /* Innenblende: schließt den Ausschnitt knapp darunter. Das Modell ist
+     einseitig — ohne Blende schaut man durch den Hals auf die Rückseite der
+     Schulterfläche, was als weißes Segel im Ausschnitt erscheint.        */
+  ring(v,function(v2){var p=neck(v2);return [p[0]*0.86,p[1]-0.016,p[2]*0.86];},
+       function(){return [0,SHO-0.030,0];},2,seg(44),
+       function(){return [trim[0]*0.86,trim[1]*0.86,trim[2]*0.88];});
+
+  /* Cap-Sleeves: kurzes, nach außen unten laufendes Rohr.
+     Die Wurzel sitzt bewusst TIEF im Rumpf — träfen sich beide Flächen an
+     der Silhouette, sähe man die Naht als Stufe. Am Ende rollt der Saum
+     nach innen ein, sonst blickt man in ein offenes Rohr.                 */
   var SL=women?0.150:0.200;
   [1,-1].forEach(function(side){
-    var x0=side*(hx(0.21)-0.014);
-    sweep(v,function(t){return [x0+side*SL*t,0.212-0.118*t*t-0.028*t,0];},
-      function(t){return [0.086-0.020*t,0.080-0.015*t];},[0,1,0],
-      seg(10),seg(24),function(t){return t>0.88?trim:cloth;});
+    var x0=side*(hx(0.21)-0.058);
+    function bahn(t){return [x0+side*SL*t,0.212-0.118*t*t-0.028*t,0];}
+    function weite(t){return [0.086-0.020*t,0.080-0.015*t];}
+    sweep(v,bahn,weite,[0,1,0],seg(12),seg(24),function(t){return t>0.88?trim:cloth;});
+    // Saumrolle am Ärmelende, im Achsenkreuz des letzten Rings aufgebaut.
+    var C=bahn(1),r=weite(1);
+    var tan=vnorm([side*SL,-0.264,0]);
+    var n1=vnorm(vcross([0,1,0],tan)),n2=vnorm(vcross(tan,n1));
+    function kranz(k,tief){return function(v2){var a=v2*Math.PI*2;
+      return vadd(vadd(C,vmul(tan,tief)),
+                  vadd(vmul(n1,Math.cos(a)*r[0]*k),vmul(n2,Math.sin(a)*r[1]*k)));};}
+    ring(v,kranz(1,0),kranz(0.70,-0.020),3,seg(24),function(){return trim;},{flip:true});
   });
   DET=1;
   return new Float32Array(v);

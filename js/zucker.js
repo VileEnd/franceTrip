@@ -139,11 +139,6 @@ var SVG=[
   '          <circle class="zk-korn-zucker" cx="376" cy="203" r="2"/>',
   '          <circle class="zk-korn-zucker" cx="551" cy="210" r="2.2"/>',
   '        </g>',
-  '        <g id="zk-haufen" transform="translate(556,196) scale(0,0)">',
-  '          <ellipse class="zk-schlagschatten" cx="0" cy="0" rx="26" ry="6"/>',
-  '          <path class="zk-fuellung" d="M-23,0 C-18,-19 -7,-30 0,-30 C8,-30 18,-18 23,0 Z"/>',
-  '          <path class="zk-zuckerton" d="M3,-29 C12,-24 19,-12 22,0 L8,0 C8,-11 6,-21 3,-29 Z"/>',
-  '        </g>',
   '        <g id="zk-funken" opacity="0">',
   '          <path class="zk-funke" d="M0,-9 L2.2,-2.2 L9,0 L2.2,2.2 L0,9 L-2.2,2.2 L-9,0 L-2.2,-2.2 Z" transform="translate(432,118)"/>',
   '          <path class="zk-funke" d="M0,-7 L1.7,-1.7 L7,0 L1.7,1.7 L0,7 L-1.7,1.7 L-7,0 L-1.7,-1.7 Z" transform="translate(508,128)"/>',
@@ -217,7 +212,7 @@ var dose=document.getElementById('zk-dose'),schatten=document.getElementById('zk
     loeffel=document.getElementById('zk-loeffel'),deckel=document.getElementById('zk-deckel'),
     armR=document.getElementById('zk-arm-r'),
     pegel=document.getElementById('zk-pegel'),berg=document.getElementById('zk-berg'),
-    haufen=document.getElementById('zk-haufen'),
+
     koernerBox=document.getElementById('zk-koerner'),funken=document.getElementById('zk-funken'),
     loeffelzucker=document.getElementById('zk-loeffelzucker'),
     streu=document.getElementById('zk-streu'),
@@ -287,7 +282,7 @@ function gangArme(s){
 /* ---- Zeitleiste: die ganze Szene als Funktion von t ------------------------- */
 function zustand(t){
   var s={x:X0,y:0,rot:0,tilt:0,dir:1,sqx:1,sqy:1,loef:0,deck:0,
-         armR:0,gang:0,pegel:0,berg:0,haufen:0,strahl:0,giessP:0,funke:0,zuckerLoef:0,text:0,zitterX:0,zitterY:0};
+         armR:0,gang:0,pegel:0,berg:0,strahl:0,giessP:0,funke:0,zuckerLoef:0,text:0,zitterX:0,zitterY:0};
   var bild=Math.round(t/TAKT);                  // laufende Nummer der Zeichnung
   s.zitterX=(bild*7%3-1)*.45;s.zitterY=(bild*11%3-1)*.4;
   if(t<RUNDEN*RUNDE){
@@ -330,12 +325,10 @@ function zustand(t){
         s.x=X0;s.pegel=STUFEN[r+1];
     }
     /* Was daneben geht, sammelt sich neben der Tasse (kleines Häufchen). */
-    s.haufen=clamp((s.pegel-.18)/.82,0,1)*.62;
   }else if(t<RUNDEN*RUNDE+FINALE){
     var ft=t-(RUNDEN*RUNDE);
     s.text=RUNDEN;s.pegel=1;s.x=X0;
     s.berg=zurueck(clamp(ft/.55,0,1));
-    s.haufen=.62+.38*clamp(ft/.7,0,1);
     if(ft>.25&&ft<1.45)huepfen(s,(ft-.25)/1.2,2,1);     // Freudensprünge
     s.funke=clamp(ft/.5,0,1)*clamp((FINALE-ft)/.8,0,1);
     s.loef=LOEF_RUHE+Math.sin(ft*7)*9;s.armR=Math.sin(ft*7)*8;
@@ -344,7 +337,6 @@ function zustand(t){
     s.text=RUNDEN;s.x=X0;
     s.pegel=1-weich(clamp(et*1.3,0,1));
     s.berg=1-weich(clamp(et*2.6,0,1));
-    s.haufen=1-weich(clamp(et*2,0,1));
   }
   return s;
 }
@@ -377,7 +369,6 @@ function zeichne(s){
   loeffel.setAttribute('transform','translate('+f(hand.x)+','+f(hand.y)+') rotate('+f(s.loef)+')');
   pegel.setAttribute('transform','translate(0,'+f(lerp(PEGEL_LEER,PEGEL_VOLL,s.pegel))+')');
   berg.setAttribute('transform','translate('+TASSE+','+RAND+') scale('+f(.55+.45*s.berg)+','+f(Math.max(s.berg,0))+')');
-  haufen.setAttribute('transform','translate(556,'+BASE+') scale('+f(Math.max(s.haufen,0))+')');
   funken.setAttribute('opacity',f(Math.max(s.funke,s.strahl*.5)));
   streu.setAttribute('opacity',f(clamp(s.pegel*1.3,0,1)*.9));
 
