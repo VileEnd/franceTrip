@@ -220,7 +220,7 @@ var PROFILE={
      entsprechend gröber dürfen sie sein. Das zählt hier doppelt: von jeder
      Haltung liegt ein eigenes Netz im Speicher. */
   foot:{model:'walker',size:SB.isMobile?30:36,cars:1,pitch:1,anim:true,
-        cycle:1.9,detail:SB.lowPower?0.36:0.5,emoji:'🚶'},
+        cycle:1.9,detail:SB.lowPower?0.5:0.8,emoji:'🚶'},
   bus :{model:'bus', size:SB.isMobile?34:44,cars:1,pitch:1,emoji:'🚌'},
   car :{model:'car', size:SB.isMobile?30:38,cars:1,pitch:1,emoji:'🚗'},
   boat:{model:'bus', size:SB.isMobile?34:44,cars:1,pitch:1,emoji:'⛴️'}

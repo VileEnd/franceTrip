@@ -477,7 +477,7 @@ function person(out,p,y,C){
       hemd=hexRGB(C.cloth,'#EC0016'),
       hose=hexRGB(C.trousers,'#3A4453'),
       haar=hexRGB(C.hair,'#3A2A21'),
-      schuh=[0.14,0.15,0.17];
+      schuh=[0.09,0.10,0.12];
   var teile=[],tief=1e9;
 
   /* Ein Glied als Rohr mit Kugelgelenk am Ende. `dy` setzt es neben die
@@ -487,9 +487,9 @@ function person(out,p,y,C){
      Referenzvektor würde das Rahmenkreuz entarten lassen. */
   function glied(a,b,dy,r0,r1,col){
     sweep(teile,function(t){return [mix(a[0],b[0],t),y+dy,mix(a[2],b[2],t)];},
-          function(t){return mix(r0,r1,t);},[0,1,0],seg(3),seg(9),
+          function(t){return mix(r0,r1,t);},[0,1,0],seg(3),seg(15),
           function(){return col;});
-    ball(teile,b[0],y+dy,b[2],r1,r1,r1,col,8);
+    ball(teile,b[0],y+dy,b[2],r1,r1,r1,col,9);
   }
   /* Ein Bein aus Hüftwinkel und Kniebeugung. Nebenbei wird gemerkt, wie
      tief der Fuß steht — daraus ergibt sich unten der Bodenkontakt. */
@@ -501,9 +501,12 @@ function person(out,p,y,C){
         fuss=[knie[0]+L2*Math.sin(sa),0,knie[2]-L2*Math.cos(sa)];
     glied([0,0,HIP],knie,dy,0.058,0.042,hose);
     glied(knie,fuss,dy,0.042,0.032,hose);
-    box(teile,fuss[0]-0.032,fuss[0]+0.056,y+dy-0.030,y+dy+0.030,
-        fuss[2]-0.028,fuss[2]+0.018,schuh);
-    if(fuss[2]-0.028<tief)tief=fuss[2]-0.028;
+    /* Schuh als flaches Ellipsoid mit Ferse. Deutlich länger und dunkler als
+       das Bein — sonst verschwindet der Fuß im Hosenbein und man sieht dem
+       Gang nicht mehr an, wo er aufsetzt. */
+    ball(teile,fuss[0]+0.020,y+dy,fuss[2]-0.004,0.064,0.035,0.026,schuh,11);
+    ball(teile,fuss[0]-0.030,y+dy,fuss[2]+0.008,0.032,0.032,0.030,schuh,9);
+    if(fuss[2]-0.030<tief)tief=fuss[2]-0.030;
   }
   /* Arme schwingen gegenläufig zu den Beinen derselben Seite. */
   function arm(ph,dy){
@@ -525,32 +528,52 @@ function person(out,p,y,C){
         function(t){
           var k=curve([[0,0.86],[0.18,0.80],[0.62,1],[0.86,1],[1,0.34]],t);
           return [0.086*k,0.104*k];
-        },[0,1,0],seg(8),seg(13),function(){return hemd;});
-  ball(teile,0,y,SH+0.048,0.050,0.050,0.050,haut,8);          // Hals
-  ball(teile,-0.014,y,0.868,0.081,0.084,0.081,haar,10);       // Haar
-  ball(teile,0.008,y,0.856,0.076,0.078,0.076,haut,10);        // Kopf
-  if(C.zopf)ball(teile,-0.072,y,0.800,0.046,0.058,0.040,haar,8);
+        },[0,1,0],seg(8),seg(20),function(){return hemd;});
+  ball(teile,0,y,SH+0.048,0.050,0.050,0.050,haut,9);          // Hals
+  ball(teile,-0.014,y,0.868,0.081,0.084,0.081,haar,15);       // Haar
+  ball(teile,0.008,y,0.856,0.076,0.078,0.076,haut,15);        // Kopf
+  /* Lange Haare: ein Fall über den Rücken, unten etwas breiter. Von schräg
+     oben ist genau das der Unterschied, den man erkennt. */
+  if(C.langhaar){
+    sweep(teile,function(t){return [mix(-0.032,-0.060,t),y,mix(0.892,0.630,t)];},
+          function(t){var k=curve([[0,0.72],[0.35,1],[1,0.88]],t);
+                      return [0.062*k,0.078*k];},[0,1,0],seg(6),seg(15),
+          function(){return haar;});
+    ball(teile,-0.060,y,0.628,0.052,0.066,0.052,haar,10);
+  }else if(C.zopf)ball(teile,-0.072,y,0.800,0.046,0.058,0.040,haar,9);
   if(C.pack){
     var pk=hexRGB(C.pack,'#C7773A');
     box(teile,-0.115,-0.058,y-0.072,y+0.072,HIP+0.03,SH+0.02,pk);
     box(teile,-0.122,-0.100,y-0.040,y+0.040,SH-0.06,SH+0.00,pk);
   }
 
-  /* Absenken, bis der tiefere Fuß die Straße berührt. */
-  for(var i=0;i<teile.length;i+=11)teile[i+2]-=tief;
+  /* Zum Schluss beides auf einmal: so weit absenken, dass der tiefere Fuß
+     die Straße berührt, und auf die gewünschte Körpergröße bringen. Der
+     Maßstab ist in allen drei Achsen gleich — die Normalen bleiben gültig,
+     und die Figur wird kleiner, nicht gestaucht. Um die eigene Standspur
+     (y) skaliert, damit sie neben der anderen stehen bleibt.            */
+  var k=C.hoch||1;
+  for(var i=0;i<teile.length;i+=11){
+    teile[i]*=k;
+    teile[i+1]=y+(teile[i+1]-y)*k;
+    teile[i+2]=(teile[i+2]-tief)*k;
+  }
   for(i=0;i<teile.length;i++)out.push(teile[i]);
 }
-/* Zwei Figuren nebeneinander, um einen halben Schritt versetzt. */
+/* Zwei Figuren nebeneinander, um einen halben Schritt versetzt: er etwas
+   größer, mit Rucksack; sie etwas kleiner, mit langen Haaren. Beide tragen
+   dasselbe Shirt — dasselbe, das am Seitenende auch in 3D herumhängt. */
 function walker(C){
   C=C||{};
   DET=C.detail||1;
-  var v=[],p=C.phase||0;
-  person(v,p,      C.gap===undefined?0.155:C.gap,
-    {cloth:C.cloth||'#EC0016',trousers:C.trousers||'#3A4453',
-     skin:C.skin,hair:C.hair,zopf:true});
-  person(v,p+0.5, -(C.gap===undefined?0.155:C.gap),
-    {cloth:C.cloth2||'#F4F2EE',trousers:C.trousers2||'#2E3A4A',
-     skin:C.skin2||C.skin,hair:C.hair2||'#20242B',pack:C.pack||'#C7773A'});
+  var v=[],p=C.phase||0,gap=C.gap===undefined?0.150:C.gap;
+  person(v,p,gap,
+    {cloth:C.cloth||'#F4F2EE',trousers:C.trousers||'#3A4453',
+     skin:C.skin,hair:C.hair||'#D8B25E',pack:C.pack||'#C7773A'});
+  person(v,p+0.5,-gap,
+    {cloth:C.cloth2||C.cloth||'#F4F2EE',trousers:C.trousers2||'#2E3A4A',
+     skin:C.skin2||C.skin,hair:C.hair2||'#1A1B20',
+     langhaar:true,hoch:C.hoch2||0.90});
   DET=1;
   return new Float32Array(v);
 }

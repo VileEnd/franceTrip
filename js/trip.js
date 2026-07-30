@@ -377,8 +377,11 @@ SB.trip={
        Buslänge auf dem Schirm. Der Bus trägt römisches Rot, nicht das
        Nachtblau des Nightjet. */
     modes:{
-      foot:{size:SB.isMobile?32:40,cloth:'#C0392B',cloth2:'#F2EFE7',
-            trousers:'#37414F',trousers2:'#2C3542',pack:'#C98A3C'},
+      /* Beide im weißen Trip-Shirt (dasselbe Weiß wie das 3D-T-Shirt weiter
+         unten). Er blond mit Rucksack, sie kleiner mit langen Haaren. */
+      foot:{size:SB.isMobile?32:40,
+            cloth:'#F4F2EE',trousers:'#37414F',hair:'#D8B25E',pack:'#C98A3C',
+            trousers2:'#2C3542',hair2:'#17181D',hoch2:0.90},
       bus:{size:SB.isMobile?38:48,color:'#C0392B',accent:'#F2EFE7',
            glass:'#2B3742',light:'#F7F4EC'}
     },
@@ -592,11 +595,11 @@ SB.trip={
     {type:'tee',
      title:'Die Dienstkleidung',
      sub:'Unser Motto steht schon drauf, ganz ohne Diskussion: <b>Alle Wege führen zum Essen.</b>',
-     emoji:'🍕',tag:'RM',
+     emoji:'🍝',tag:'RM',
      motto1:'Alle Wege führen',motto2:'zum Essen.',
      cut:'women',
-     ariaLabel:'Weißes T-Shirt mit Pizzastück und dem Aufdruck: Alle Wege führen zum Essen',
-     caption:'Weißes Baumwoll-Tee, Pizza vorne drauf. Pflichtausstattung — Nachschlag ist kein Verstoß, sondern Vorschrift.'},
+     ariaLabel:'Weißes T-Shirt mit einem Teller Pasta und dem Aufdruck: Alle Wege führen zum Essen',
+     caption:'Weißes Baumwoll-Tee, Pasta vorne drauf. Pflichtausstattung — Nachschlag ist kein Verstoß, sondern Vorschrift. Dasselbe Shirt tragen wir oben auf der Karte auch.'},
 
     {type:'cards',
      title:'Wo wir schlafen',
