@@ -77,16 +77,27 @@ SB.trip = {
               rail:'#9AA0A6', tie:'#544941', ballast:'#918B82',
               tapModel:'croissant',         // Antippen tauscht das Modell (null = aus)
               tapTitle:'…', tapAria:'…', tapToast:'…', tapToastBack:'…' },
+    modes:{                            // Profile je Reiseart (siehe route.legs)
+      foot:{ size:36, cycle:1.9,       // px Körperhöhe · Schrittzyklus in Höhen
+             cloth:'#EC0016', cloth2:'#F4F2EE',   // Oberteile der beiden
+             trousers:'…', trousers2:'…', pack:'#C7773A' },
+      bus :{ size:44, color:'#C0392B' }
+    },
     vehicle3d:false,                   // → flaches Emoji statt 3D-Modell
     trainEmoji:'🚆',                   // nur für die Emoji-Variante
     routeColor:'#EC0016', doneColor:'#FFD800', stopColor:'#EC0016',
+    footColor:'#C0392B', busColor:'#2E6F97',
     bg:'#EFEDE8', terrain:true,        // 3D-Gelände (Standard: aus, weil teuer)
     pitchScale: 1                      // Kamera-Neigung dämpfen (0…1)
   },
 
   route: {
     coords: [[lng,lat], …],            // Streckenpunkte, Hin- UND Rückweg
-    stopIdx: [0, 5, …]                 // Indizes der Punkte mit Halte-Kreis
+    marks:  { termini:87, kolosseum:99 },   // optional: Namen für Punkte
+    legs:   [{to:'termini',mode:'rail'},    // optional: Reiseart je Abschnitt
+             {to:'venezia',mode:'foot'},    //   'rail'|'foot'|'bus'|'car'|'boat'
+             {to:'bahnhof',mode:'bus'}],    //   ohne legs ist alles 'rail'
+    stopIdx: [0, 'kolosseum', …]       // Punkte mit Halte-Kreis (Index oder Name)
   },
 
   teapot: {                            // ODER null → keine Teekanne
@@ -115,8 +126,10 @@ SB.trip = {
   },
 
   scenes: [{
-    i0:0, i1:5,                        // Routen-PUNKT-Index Start/Ende der Etappe
+    i0:0, i1:5,                        // Routen-PUNKT Start/Ende der Etappe
+                                       //   (Index ODER Name aus route.marks)
     z0:11.8, z1:8.4,                   // Karten-Zoom Start/Ende
+    zRamp:true,                        // Zoom auch bei 'steps' durchfahren
     p0:50, p1:48,                      // Kamera-Neigung (Pitch)
     b0:18, b1:-12,                     // Kamera-Drehung (Bearing)
     cost: 29,                          // Ticketkosten (summiert der Ticker)
@@ -168,7 +181,35 @@ dazu. Genau das ruckelt. Deshalb:
 | `'scenes'` | die durchgehend animierten Zoomfahrten aus `z0`→`z1` | filmisch, aber am teuersten |
 
 `z0`/`z1` der Szenen bleiben in jedem Fall stehen — sie werden nur von
-`'fixed'` ignoriert.
+`'fixed'` ignoriert. Eine einzelne Szene darf mit `zRamp:true` trotzdem
+durchzoomen: gedacht für den einen Moment, in dem die Karte aus der
+Reiseflughöhe in eine Stadt hineinfährt. Als Dauerzustand wäre das `'scenes'`
+und damit teuer, als Ausnahme kostet es fast nichts.
+
+### Reisearten: Bahn, zu Fuß, Bus (`route.legs`)
+
+Eine Reise besteht selten aus einer einzigen Fortbewegungsart. `route.legs`
+teilt die Strecke in Abschnitte, jeder mit einer Reiseart — und die Karte
+richtet sich danach:
+
+| Reiseart | Fahrzeug | Linie |
+|----------|----------|-------|
+| `'rail'` | Triebzug aus mehreren Wagen | Schotterbett, Schwellen, zwei Schienen |
+| `'foot'` | zwei Gehende im Schrittzyklus | Punktspur mit weißem Rand |
+| `'bus'` · `'car'` · `'boat'` | Einzelfahrzeug | glatte Straße |
+
+Jede Etappe läuft von dort, wo die vorige aufhörte, bis `to` — als Index oder
+als Name aus `route.marks`. Ohne `legs` ist alles `'rail'`, die Karte verhält
+sich dann exakt wie vorher.
+
+Damit die Szenen bei einer feingliedrigen Route lesbar bleiben, vergibt
+`route.marks` Namen: Szenen schreiben `i0:'kolosseum'` statt `i0:87`, und beim
+Einfügen eines Straßenpunktes verrutscht nichts. `js/trip.js` des Rom-Trips
+baut Punkte, Namen und Etappen in einem Rutsch aus benannten Teilstücken —
+das ist die empfohlene Form, sobald eine Route Straßenzüge enthält.
+
+Die Zoomstufe kommt weiterhin aus den Szenen: für Stadtetappen `z0`/`z1` auf
+15–16 setzen, für die Bahnfahrt auf 8–10.
 
 ### Das 3D-Fahrzeug
 
@@ -221,7 +262,26 @@ Teileliste um und kostet gar nichts mehr.
 | `'train'` | Lok mit gelber Bugpartie + Wagen |
 | `'bus'` | Reisebus |
 | `'car'` | Auto |
+| `'walker'` | zwei Gehende nebeneinander, einer mit Rucksack (siehe unten) |
 | `'croissant'` | ein Hörnchen mit diagonalen Wickeln |
+
+**Die Gehenden laufen wirklich.** `model:'walker'` (automatisch auf allen
+`'foot'`-Etappen) ist kein Standbild: das Modell wird in acht Haltungen
+gebaut — auf schwachen Geräten sechs — und beim Zeichnen durchgeschaltet.
+Welche Haltung dran ist, entscheidet die **zurückgelegte Strecke**, nicht die
+Uhr: ein voller Zyklus misst `cycle` Körperhöhen auf dem Bildschirm. Dadurch
+bleiben die Füße am Boden, egal ob gescrollt, gerissen oder pausiert wird.
+
+Die Haltung selbst kommt aus einfacher Kinematik — Hüftwinkel als Sinus,
+Knie beugt nur in der Schwungphase — und die Figur wird am Ende so weit
+abgesenkt, dass der tiefere Fuß die Straße berührt. Das Wippen im Gang
+entsteht dadurch von selbst, statt aufgesetzt zu sein.
+
+Acht Körper zu rechnen kostet einige zehn Millisekunden. Genau dann
+anzufallen, wenn die Karte in die Stadt hineinfährt, wäre der schlechteste
+denkbare Moment — deshalb baut `js/map.js` sie schon während der Bahnfahrt in
+den Leerlaufpausen (`requestIdleCallback`) und lädt sie beim Wechsel nur noch
+auf die Grafikkarte.
 
 **Antippen:** Ein Klick aufs Fahrzeug tauscht `model` gegen `tapModel` und
 wieder zurück — beim Frankreich-Trip fährt der ICE dann als Croissant weiter,
@@ -289,10 +349,17 @@ das Pausieren außerhalb des Bildschirms derselbe Codepfad.
 - Koordinaten sind `[Längengrad, Breitengrad]` (Lng zuerst — wie GeoJSON).
 - Punkte entlang echter Bahnstrecken setzen; 30–50 Punkte reichen für eine
   glaubwürdige Linie. Für den Rückweg die Punkte gespiegelt anhängen.
-- `i0`/`i1` der Szenen sind Indizes in `route.coords` — die Engine rechnet
-  sie selbst in Streckenanteile um.
-- Kamera: `z` 7–9 für Überblick, 11–12.5 für Städte; `p` (Pitch) 45–56 wirkt
-  filmisch; `b` (Bearing) langsam drehen lassen (±30–60 zwischen Szenen).
+- `i0`/`i1` der Szenen sind Punkte in `route.coords` — als Index oder als Name
+  aus `route.marks`. Die Engine rechnet sie selbst in Streckenanteile um.
+- Für Wege durch eine Stadt reichen 30 Punkte nicht: dort folgt die Linie den
+  Straßen, das sind schnell 25–30 Punkte **pro Runde**. Ab dieser Größe lohnt
+  es sich, die Route wie im Rom-Trip aus benannten Teilstücken zu bauen.
+- Jede Szene bekommt gleich viel Scrollzeit, egal wie lang ihre Etappe ist.
+  Eine 4-km-Runde durch Rom steht damit gleichberechtigt neben 700 km
+  Nachtzug — genau so soll es sein.
+- Kamera: `z` 7–9 für Überblick, 11–12.5 für Städte, 15–16 für einzelne
+  Gassen; `p` (Pitch) 45–56 wirkt filmisch; `b` (Bearing) langsam drehen
+  lassen (±30–60 zwischen Szenen, in der Stadt eher ±15).
 
 ## Veröffentlichen: GitHub Pages mit Branch-Vorschauen
 

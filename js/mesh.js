@@ -419,6 +419,7 @@ function iceTrain(C){
    Modellraum: +x = Fahrtrichtung, +z = oben, Gesamtlänge 1.               */
 function vehicle(kind,C){
   C=C||{};
+  if(kind==='walker')return walker(C);            // steht weiter unten
   DET=C.detail||1;
   var body=hexRGB(C.color,'#EC0016'),accent=hexRGB(C.accent,'#FFD800'),
       glass=hexRGB(C.glass,'#26313E'),light=hexRGB(C.light,'#F2F0EA'),
@@ -448,6 +449,108 @@ function vehicle(kind,C){
     box(v,-0.49,-0.03,-0.147,0.147,0.175,0.240,glass);
     box(v,-0.50,-0.02,-0.1425,0.1425,0.09,0.125,body);
   }
+  DET=1;
+  return new Float32Array(v);
+}
+
+/* ---- Fußgänger ----------------------------------------------------------
+   Für Etappen, die zu Fuß gehen: wir zwei, nebeneinander, im Gegentakt.
+   Modellraum wie bei den Fahrzeugen — +x = Gehrichtung, +z = oben — die
+   Körperhöhe ist 1, damit `size` in js/map.js direkt die Pixelhöhe ist.
+
+   Der Schrittzyklus steckt NICHT in einer Matrix, sondern in der Geometrie:
+   js/map.js baut das Modell einmal in mehreren Haltungen und schaltet beim
+   Zeichnen durch, je nach zurückgelegter Strecke. Das ist derselbe Trick wie
+   beim Zeichentrick „auf Zweien" — und es ist der einzige bezahlbare: ein
+   Netz pro Bild neu zu rechnen kostet auf der Karte zu viel.
+
+   Weil die Haltung aus der Kinematik kommt (Hüfte fest, Knie beugt in der
+   Schwungphase), stimmt auch der Bodenkontakt: die Figur wird am Ende so
+   weit abgesenkt, dass der tiefere Fuß genau auf der Straße steht. Das
+   Wippen im Gang entsteht dadurch von selbst, statt aufgesetzt zu sein.   */
+var TAU=Math.PI*2;
+function person(out,p,y,C){
+  var HIP=0.500,L1=0.255,L2=0.245,        // Hüfthöhe = Oberschenkel + Unterschenkel
+      SW=0.40,KB=0.85,                    // Schwungweite / Kniebeugung (rad)
+      SH=0.715,A1=0.175,A2=0.165;         // Schulterhöhe / Ober- + Unterarm
+  var haut=hexRGB(C.skin,'#E8B98F'),
+      hemd=hexRGB(C.cloth,'#EC0016'),
+      hose=hexRGB(C.trousers,'#3A4453'),
+      haar=hexRGB(C.hair,'#3A2A21'),
+      schuh=[0.14,0.15,0.17];
+  var teile=[],tief=1e9;
+
+  /* Ein Glied als Rohr mit Kugelgelenk am Ende. `dy` setzt es neben die
+     Körpermitte — sonst stecken beide Beine ineinander, was von schräg oben
+     (und genau so schaut die Karte) sofort auffällt.
+     up=[0,1,0]: die Glieder zeigen nach unten, ein senkrechter
+     Referenzvektor würde das Rahmenkreuz entarten lassen. */
+  function glied(a,b,dy,r0,r1,col){
+    sweep(teile,function(t){return [mix(a[0],b[0],t),y+dy,mix(a[2],b[2],t)];},
+          function(t){return mix(r0,r1,t);},[0,1,0],seg(3),seg(9),
+          function(){return col;});
+    ball(teile,b[0],y+dy,b[2],r1,r1,r1,col,8);
+  }
+  /* Ein Bein aus Hüftwinkel und Kniebeugung. Nebenbei wird gemerkt, wie
+     tief der Fuß steht — daraus ergibt sich unten der Bodenkontakt. */
+  function bein(ph,dy){
+    var a=SW*Math.sin(TAU*ph),
+        kb=KB*Math.max(0,Math.cos(TAU*ph)),   // Knie beugt nur beim Vorschwingen
+        knie=[L1*Math.sin(a),0,HIP-L1*Math.cos(a)],
+        sa=a-kb,
+        fuss=[knie[0]+L2*Math.sin(sa),0,knie[2]-L2*Math.cos(sa)];
+    glied([0,0,HIP],knie,dy,0.058,0.042,hose);
+    glied(knie,fuss,dy,0.042,0.032,hose);
+    box(teile,fuss[0]-0.032,fuss[0]+0.056,y+dy-0.030,y+dy+0.030,
+        fuss[2]-0.028,fuss[2]+0.018,schuh);
+    if(fuss[2]-0.028<tief)tief=fuss[2]-0.028;
+  }
+  /* Arme schwingen gegenläufig zu den Beinen derselben Seite. */
+  function arm(ph,dy){
+    var a=-0.62*SW*Math.sin(TAU*ph),
+        eb=0.55*Math.max(0,-Math.cos(TAU*ph)),
+        ell=[A1*Math.sin(a),0,SH-A1*Math.cos(a)],
+        sa=a+eb,
+        hand=[ell[0]+A2*Math.sin(sa),0,ell[2]-A2*Math.cos(sa)];
+    glied([0,0,SH],ell,dy,0.038,0.030,hemd);
+    glied(ell,hand,dy,0.030,0.026,haut);
+  }
+
+  bein(p,0.046);bein(p+0.5,-0.046);
+  arm(p+0.5,0.094);arm(p,-0.094);
+  /* Rumpf: von der Seite breiter als von vorn, an der Taille schmaler, und
+     oben über die Schultern gerundet statt flach abgeschnitten — sonst
+     steht da eine Pappscheibe mit Kopf drauf. */
+  sweep(teile,function(t){return [0.012*t,y,mix(HIP-0.03,SH+0.085,t)];},
+        function(t){
+          var k=curve([[0,0.86],[0.18,0.80],[0.62,1],[0.86,1],[1,0.34]],t);
+          return [0.086*k,0.104*k];
+        },[0,1,0],seg(8),seg(13),function(){return hemd;});
+  ball(teile,0,y,SH+0.048,0.050,0.050,0.050,haut,8);          // Hals
+  ball(teile,-0.014,y,0.868,0.081,0.084,0.081,haar,10);       // Haar
+  ball(teile,0.008,y,0.856,0.076,0.078,0.076,haut,10);        // Kopf
+  if(C.zopf)ball(teile,-0.072,y,0.800,0.046,0.058,0.040,haar,8);
+  if(C.pack){
+    var pk=hexRGB(C.pack,'#C7773A');
+    box(teile,-0.115,-0.058,y-0.072,y+0.072,HIP+0.03,SH+0.02,pk);
+    box(teile,-0.122,-0.100,y-0.040,y+0.040,SH-0.06,SH+0.00,pk);
+  }
+
+  /* Absenken, bis der tiefere Fuß die Straße berührt. */
+  for(var i=0;i<teile.length;i+=11)teile[i+2]-=tief;
+  for(i=0;i<teile.length;i++)out.push(teile[i]);
+}
+/* Zwei Figuren nebeneinander, um einen halben Schritt versetzt. */
+function walker(C){
+  C=C||{};
+  DET=C.detail||1;
+  var v=[],p=C.phase||0;
+  person(v,p,      C.gap===undefined?0.155:C.gap,
+    {cloth:C.cloth||'#EC0016',trousers:C.trousers||'#3A4453',
+     skin:C.skin,hair:C.hair,zopf:true});
+  person(v,p+0.5, -(C.gap===undefined?0.155:C.gap),
+    {cloth:C.cloth2||'#F4F2EE',trousers:C.trousers2||'#2E3A4A',
+     skin:C.skin2||C.skin,hair:C.hair2||'#20242B',pack:C.pack||'#C7773A'});
   DET=1;
   return new Float32Array(v);
 }
@@ -697,7 +800,7 @@ function chainPivot(base,pivot,rot){
 SB.mesh={hexRGB:hexRGB,surface:surface,revolve:revolve,sweep:sweep,ring:ring,
          box:box,ball:ball,curve:curve,croissant:croissant,ice:ice,
          iceTrain:iceTrain,BRAND:BRAND,GAUGE:GAUGE,
-         vehicle:vehicle,tee:tee,teapot:teapot,
+         vehicle:vehicle,walker:walker,tee:tee,teapot:teapot,
          program:program,draw:draw,mul:mul,mat:mat,chainPivot:chainPivot,
          STRIDE:STRIDE,FLOATS:11};
 })();

@@ -13,8 +13,15 @@
                         false lässt sie weg),
                 tapModel:'croissant' (Antippen tauscht das Modell;
                         null schaltet das ab)}
+     modes     Profile je Reiseart, überschreibt die Vorgaben:
+               {foot:{size:34,cycle:1.9}, bus:{size:44,model:'bus'}, …}
+               Welcher Abschnitt zu Fuß, mit Bus oder mit der Bahn
+               zurückgelegt wird, steht in trip.route.legs (js/core.js);
+               die Karte wechselt Modell, Größe und Linienstil dann von
+               selbst — Zug auf Gleis, zwei Gehende auf einer Punktspur.
      vehicle3d false = flaches Emoji statt 3D-Modell
-     trainEmoji, routeColor, doneColor, stopColor, bg, terrain:false, pitchScale
+     trainEmoji, routeColor, doneColor, stopColor, footColor, busColor,
+     bg, terrain:false, pitchScale
    Stellt bereit: SB.mapCtl = { map, ready, zoomAt(), setVehicle() }
 
    ---- Warum ein fester Zoom? ---------------------------------------------
@@ -132,8 +139,12 @@ function stepZoom(s){
   if(s.zStep===undefined)s.zStep=Math.round(((s.z0+s.z1)/2)*2)/2;
   return s.zStep;
 }
+/* zRamp:true an einer Szene fährt den Zoom auch im 'steps'-Betrieb durch —
+   gedacht für den einen Moment, in dem die Karte aus der Reiseflughöhe in
+   die Stadt hineinfährt. Als Dauerzustand wäre das zu teuer, als einzelne
+   Szene ist es genau das, was man sehen will. */
 SB.mapCtl.zoomAt=function(s,t){
-  if(zoomMode==='scenes')return s.z0+(s.z1-s.z0)*t;
+  if(zoomMode==='scenes'||s.zRamp)return s.z0+(s.z1-s.z0)*t;
   if(zoomMode==='steps')return stepZoom(s);
   return cruiseZoom;
 };
@@ -154,13 +165,19 @@ function warmStart(){
 }
 /* Während der Fahrt: ein Stück Strecke voraus, ein paar Kacheln breit
    (das Sichtfeld ist breiter als die Linie). Gedrosselt, damit das Planen
-   nicht in jedem Bild passiert. */
-var LOOK=0.05,   // Anteil der Gesamtstrecke, der vorausgeholt wird
-    SCHRITT=0.006,
-    BAND=2;      // Kacheln links/rechts der Strecke
+   nicht in jedem Bild passiert.
+
+   Wie weit „voraus" ist, darf KEIN fester Anteil der Gesamtstrecke sein:
+   dieselben 5 % sind auf der Bahnfahrt eine sinnvolle Etappe und in der
+   Stadt ein Vorgriff über fünfzig Kilometer — lauter Kacheln, die nie
+   gebraucht werden und dem Bild von jetzt die Leitung wegnehmen. Gemessen
+   wird deshalb in Bildschirmbreiten: gut zwei davon, egal bei welchem Zoom. */
+var VORAUS=2.2,    // Bildschirmbreiten Vorlauf
+    STUETZ=7,      // Stützstellen darauf
+    BAND=2;        // Kacheln links/rechts der Strecke
 function preAhead(f){
   var map=SB.mapCtl.map;
-  if(PRE.aus||!map)return;
+  if(PRE.aus||!map||!MLEN)return;
   var jetzt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   if(jetzt-PRE.last<350||Math.abs(f-PRE.lastF)<0.002)return;
   PRE.last=jetzt;PRE.lastF=f;
@@ -169,26 +186,66 @@ function preAhead(f){
      wird es erneut versucht. */
   if(map.areTilesLoaded&&!map.areTilesLoaded())return;
   var z=tileZoom(map.getZoom());
-  for(var d=0;d<=LOOK;d+=SCHRITT){
-    var p=route.pointAt(Math.min(f+d,1)),t=lngLatTile(z,p[0],p[1]);
+  var st=document.getElementById('stage');
+  var w=(st&&st.clientWidth)||window.innerWidth||1024;
+  // 1 Mercator-Einheit = 512·2^zoom Pixel → Vorlauf in Mercator-Bogenlänge.
+  var span=w*VORAUS/(512*Math.pow(2,map.getZoom()));
+  var a0=arcAt(f);
+  for(var i=0;i<=STUETZ;i++){
+    var m=atArc(a0+span*i/STUETZ);
+    var ll=new maplibregl.MercatorCoordinate(m[0],m[1],0).toLngLat();
+    var t=lngLatTile(z,ll.lng,ll.lat);
     for(var dx=-BAND;dx<=BAND;dx++)
       for(var dy=-BAND;dy<=BAND;dy++)preQueue(z,t[0]+dx,t[1]+dy);
   }
   prePump();
 }
 
-/* ---- Fahrzeug ------------------------------------------------------------ */
+/* ---- Fahrzeug ------------------------------------------------------------
+   Eine Reise besteht selten aus nur einer Fortbewegungsart: erst Zug, dann
+   zu Fuß durch die Stadt, dazwischen mal ein Bus. Welcher Abschnitt wie
+   zurückgelegt wird, steht in trip.route.legs (siehe js/core.js) — hier
+   hängt an jeder Reiseart ein Profil: Modell, Pixelgröße, Anzahl, Gleis.
+   Trips überschreiben einzelne Werte über trip.map.modes.                  */
 var V=M.vehicle||{};
 var use3d=(M.vehicle3d!==false);
-/* size = Pixel je Modelllänge, also die Länge EINES Wagens. Der ganze Zug
-   ist entsprechend `cars` mal so lang — deshalb liegt der Wert deutlich
-   unter dem eines Einzelfahrzeugs. */
-var vehicle={pos:R[0].slice(),dir:[0,-1],f:0,
-             size:V.size||(SB.isMobile?52:68)};
-var baseKind=V.model||'ice';
+var isTrain=((V.model||'ice')==='ice');
+var PROFILE={
+  /* size = Pixel je Modelllänge. Beim Zug ist das die Länge EINES Wagens,
+     beim Fußgänger die Körperhöhe. */
+  rail:{model:V.model||'ice',size:V.size||(SB.isMobile?52:68),
+        cars:V.cars===undefined?(isTrain?(SB.isMobile?3:4):1):V.cars,
+        pitch:V.pitch||1.03,track:isTrain&&V.track!==false,emoji:M.trainEmoji||'🚆'},
+  /* Gehende sind auf dem Schirm halb so hoch wie ein Wagen lang ist —
+     entsprechend gröber dürfen sie sein. Das zählt hier doppelt: von jeder
+     Haltung liegt ein eigenes Netz im Speicher. */
+  foot:{model:'walker',size:SB.isMobile?30:36,cars:1,pitch:1,anim:true,
+        cycle:1.9,detail:SB.lowPower?0.36:0.5,emoji:'🚶'},
+  bus :{model:'bus', size:SB.isMobile?34:44,cars:1,pitch:1,emoji:'🚌'},
+  car :{model:'car', size:SB.isMobile?30:38,cars:1,pitch:1,emoji:'🚗'},
+  boat:{model:'bus', size:SB.isMobile?34:44,cars:1,pitch:1,emoji:'⛴️'}
+};
+(function(){
+  var U=M.modes||{};
+  for(var m in U){
+    if(!PROFILE[m])PROFILE[m]={model:'car',size:36,cars:1,pitch:1};
+    for(var k in U[m])PROFILE[m][k]=U[m][k];
+  }
+})();
+function profil(m){return PROFILE[m]||PROFILE.rail;}
+
+/* Wie viele Haltungen hat der Schrittzyklus? Mehr = weicher, aber jede
+   Haltung ist ein eigenes Netz im Speicher. */
+var POSEN=SB.lowPower?6:8;
+
+var mode='rail',P0=profil('rail');
+var vehicle={pos:R[0].slice(),dir:[0,-1],f:0,size:P0.size};
 /* Antippen tauscht das Modell (tapModel:null schaltet den Gag ab). */
 var tapKind=(V.tapModel===undefined)?'croissant':V.tapModel;
-var currentKind=baseKind;
+var getippt=false;
+function baseKind(){return profil(mode).model;}
+function currentKindOf(){return getippt&&tapKind?tapKind:baseKind();}
+var currentKind=currentKindOf();
 
 /* Emoji → Canvas-Bild (Rückfallebene, wenn kein 3D möglich/gewünscht ist) */
 function emojiImage(emoji,size){
@@ -221,15 +278,20 @@ var MESH=SB.mesh;
    Schirm nur noch gut 60 px lang, also darf er gröber sein als früher das
    Einzelfahrzeug — sonst zahlt man die Feinheit vier Mal. */
 var DETAIL=V.detail||(SB.lowPower?0.45:0.62);
-/* Mehrere Wagen und Gleis gibt es nur für den Triebzug — ein Bus oder ein
-   Auto fährt einzeln und ohne Schienen. */
-var isTrain=(baseKind==='ice');
-var CARS=Math.max(1,V.cars===undefined?(isTrain?(SB.isMobile?3:4):1):V.cars);
-var RAILS=isTrain&&V.track!==false;
-var PITCH=V.pitch||1.03;              // Wagenabstand in Modelllängen
-function meshCfg(){
-  var C={};for(var k in V)C[k]=V[k];
-  C.detail=DETAIL;C.pitch=PITCH;
+/* Mehrere Wagen und Gleis gibt es nur für den Triebzug — ein Bus, ein Auto
+   oder zwei Fußgänger sind einzeln unterwegs. Beides kommt jetzt aus dem
+   Profil der aktuellen Reiseart. */
+var CARS=Math.max(1,P0.cars);
+var PITCH=P0.pitch;                   // Wagenabstand in Modelllängen
+var RAILPX=PROFILE.rail.size;         // Gleisbreiten hängen an der ZUG-Größe
+/* Farben & Maße für das Netz: erst die Fahrzeug-Angaben des Trips, dann das
+   Profil der Reiseart darüber — so bekommt der Bus seinen eigenen Lack,
+   ohne dass der Zug ihn erbt. */
+function meshCfg(m){
+  var C={},k,p=profil(m||mode);
+  for(k in V)C[k]=V[k];
+  for(k in p)C[k]=p[k];
+  C.detail=p.detail||DETAIL;C.pitch=p.pitch||PITCH;
   return C;
 }
 
@@ -337,13 +399,40 @@ function brandTexture(gl){
 /* ---- Der Zug als Kette von Teilen ---------------------------------------- */
 var layerApi={rebuild:function(){}};
 function makeVehicleLayer(map){
-  var P=null,ctx=null,tex=null,parts=[],bufs={};
+  var P=null,ctx=null,tex=null,parts=[],bufs={},roh={};
   function upload(gl,name,data){
     var m=bufs[name]||(bufs[name]={buf:gl.createBuffer(),count:0});
     gl.bindBuffer(gl.ARRAY_BUFFER,m.buf);
     gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
     m.count=data.length/MESH.FLOATS;
+    delete roh[name];              // liegt jetzt auf der Grafikkarte
     return m;
+  }
+  /* Rohdaten eines Netzes — einmal gerechnet, dann gemerkt, bis sie
+     hochgeladen sind. */
+  function netz(name,make){
+    return roh[name]||(roh[name]=make());
+  }
+  function walkerNetz(i){
+    return netz('walker'+i,function(){
+      var C=meshCfg('foot');
+      C.phase=i/POSEN;
+      return MESH.walker(C);
+    });
+  }
+  /* Ein Schrittzyklus sind POSEN einzelne Körper — zusammen einige zehn
+     Millisekunden Rechenzeit. Genau dann anzufallen, wenn die Karte in die
+     Stadt hineinfährt, wäre der denkbar schlechteste Moment. Also werden
+     sie schon während der Bahnfahrt in den Leerlaufpausen gebaut, eine je
+     Pause, und beim Wechsel nur noch hochgeladen.                        */
+  function vorrat(){
+    if(!SB.route.lines.foot||!window.requestIdleCallback)return;
+    var i=0;
+    (function weiter(){
+      if(i>=POSEN)return;
+      var k=i++;
+      requestIdleCallback(function(){walkerNetz(k);weiter();},{timeout:4000});
+    })();
   }
   /* Aufstellung bauen: nur die Wagen — das Gleis liegt als Linie auf der
      Karte, über die ganze Strecke (siehe boot()). Jedes Netz wird höchstens
@@ -365,6 +454,14 @@ function makeVehicleLayer(map){
       parts.push({n:'head',at:0,turn:false});
       for(i=1;i<CARS-1;i++)parts.push({n:'mid',at:i*PITCH,turn:false});
       parts.push({n:'head',at:(CARS-1)*PITCH,turn:true});
+    }else if(currentKind==='walker'){
+      /* Gehende bekommen keinen Wagen, sondern einen Zyklus: derselbe
+         Körper in POSEN Haltungen, einmal gebaut (siehe vorrat()) und
+         danach nur noch durchgeschaltet. */
+      for(i=0;i<POSEN;i++)need(gl,'walker'+i,(function(k){
+        return function(){return walkerNetz(k);};
+      })(i));
+      parts.push({n:'walker',at:0,turn:false,zyklus:true});
     }else{
       var one=currentKind;
       need(gl,one,function(){return MESH.vehicle(one,C);});
@@ -377,6 +474,7 @@ function makeVehicleLayer(map){
       ctx=gl;P=MESH.program(gl);tex=brandTexture(gl);
       build(gl);
       layerApi.rebuild=function(){if(ctx)build(ctx);};
+      vorrat();
     },
     render:function(gl,arg){
       if(!P)return;
@@ -386,14 +484,24 @@ function makeVehicleLayer(map){
               (arg&&arg.mainMatrix);
       if(!mat)return;
 
+      var zoom=map.getZoom();
       var lngLat={lng:vehicle.pos[0],lat:vehicle.pos[1]},alt=0;
       if(map.getTerrain&&map.getTerrain()&&map.queryTerrainElevation){
         try{alt=map.queryTerrainElevation(lngLat)||0;}catch(e){alt=0;}
       }
       var mc=maplibregl.MercatorCoordinate.fromLngLat(lngLat,alt);
       // 1 Mercator-Einheit = 512·2^zoom Pixel → feste Pixelgröße des Modells.
-      var k=vehicle.size/(512*Math.pow(2,map.getZoom()));
+      var ppm=512*Math.pow(2,zoom),k=vehicle.size/ppm;
       var head=MLEN?arcAt(vehicle.f):null;
+      /* Schritthaltung aus der zurückgelegten Strecke, nicht aus der Uhr:
+         so bleiben die Füße am Boden, egal wie schnell gescrollt wird. Ein
+         voller Zyklus (zwei Schritte) misst `cycle` Körperhöhen. */
+      var pose=0;
+      if(head!==null){
+        var zyk=Math.max(profil(mode).cycle||1.9,0.2)*vehicle.size;
+        pose=Math.floor(head*ppm/(zyk/POSEN))%POSEN;
+        if(pose<0)pose+=POSEN;
+      }
       // Licht aus Nordwest von oben, in den Modellraum gedreht (der
       // mitgedrehte Wagen soll die Beleuchtung nicht mitdrehen).
       var lw=[-0.38,-0.52,0.76];
@@ -405,7 +513,7 @@ function makeVehicleLayer(map){
       gl.disable(gl.BLEND);
       gl.disable(gl.CULL_FACE);
       for(var i=0;i<parts.length;i++){
-        var part=parts[i],m=bufs[part.n];
+        var part=parts[i],m=bufs[part.zyklus?part.n+pose:part.n];
         if(!m||!m.count)continue;
         var px=mc.x,py=mc.y,ux=vehicle.dir[0],uy=vehicle.dir[1];
         if(head!==null){
@@ -433,10 +541,12 @@ function makeVehicleLayer(map){
    ginge: der kennt keine anklickbaren Objekte.                             */
 var has3d=false;
 function emoji4(kind){
-  return kind==='croissant'?(V.tapEmoji||'🥐'):(M.trainEmoji||'🚆');
+  if(kind==='croissant')return V.tapEmoji||'🥐';
+  return profil(mode).emoji||M.trainEmoji||'🚆';
 }
 function applyModel(){
   var m=SB.mapCtl.map;
+  currentKind=currentKindOf();
   if(has3d){
     layerApi.rebuild();
     if(m&&m.triggerRepaint)m.triggerRepaint();
@@ -444,13 +554,23 @@ function applyModel(){
     try{if(m&&m.updateImage)m.updateImage('zug',emojiImage(emoji4(currentKind),96));}catch(e){}
   }
 }
+/* Reiseart gewechselt: Modell, Größe und Anzahl kommen aus dem Profil.
+   Aufgerufen aus setVehicle(), also höchstens einmal je Bild — und die
+   Netze werden dabei nur beim allerersten Mal wirklich gebaut. */
+function setMode(m){
+  if(m===mode||!PROFILE[m])return;
+  mode=m;
+  var p=profil(m);
+  vehicle.size=p.size;CARS=Math.max(1,p.cars);PITCH=p.pitch||1;
+  applyModel();
+}
 function toggleModel(){
   if(!tapKind)return;
-  currentKind=(currentKind===baseKind)?tapKind:baseKind;
+  getippt=!getippt;
   applyModel();
-  if(SB.showToast)SB.showToast(currentKind===baseKind
-    ?(V.tapToastBack||'🚄 Weiter im Takt.')
-    :(V.tapToast||'🥐 Croissant-Express — bon voyage!'));
+  if(SB.showToast)SB.showToast(getippt
+    ?(V.tapToast||'🥐 Croissant-Express — bon voyage!')
+    :(V.tapToastBack||'🚄 Weiter im Takt.'));
 }
 function addHitArea(){
   if(!tapKind)return;
@@ -465,7 +585,7 @@ function addHitArea(){
 }
 SB.mapCtl.setVehicle=function(pos,ahead,f){
   vehicle.pos=pos;
-  if(typeof f==='number')vehicle.f=f;
+  if(typeof f==='number'){vehicle.f=f;setMode(route.modeAt(f));}
   if(ahead){
     // Richtung im Mercator-Raum bestimmen — dort ist die Karte „gerade“.
     var dx=ahead[0]-pos[0],dy=pos[1]-ahead[1];   // y wächst nach Süden
@@ -529,38 +649,75 @@ function starteKarte(){
       tileSize:256,maxzoom:11});
       map.setTerrain({source:'dem',exaggeration:1.5});}catch(e){}}
     map.addSource('route',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:R}}});
-    /* ---- Gleis über die ganze Strecke ---------------------------------
-       Nicht als 3D-Körper (das wären tausende Schwellen), sondern als vier
-       Linien: Schotterbett, Schwellenschraffur (kurze Striche über die
-       Breite) und zwei versetzte Schienen. Die Breiten kommen aus denselben
-       Maßen, aus denen die Wagen ihre Spurweite nehmen (SB.mesh.GAUGE ×
-       Pixel je Modelllänge) — nur so stehen die Räder auf den Schienen und
-       nicht daneben.                                                     */
-    if(RAILS){
-      var G=MESH.GAUGE,px=vehicle.size;
-      map.addLayer({id:'rail-bed',type:'line',source:'route',
-        layout:{'line-cap':'round','line-join':'round'},
-        paint:{'line-color':V.ballast||'#918B82','line-width':2*G.bed*px,'line-opacity':.92}});
-      map.addLayer({id:'rail-ties',type:'line',source:'route',
-        paint:{'line-color':V.tie||'#544941','line-width':2*G.tie*px,'line-opacity':.6,
-               'line-dasharray':[0.24,0.34]}});
-      [-1,1].forEach(function(s){
-        map.addLayer({id:'rail'+(s<0?'-l':'-r'),type:'line',source:'route',
-          layout:{'line-cap':'round','line-join':'round'},
-          paint:{'line-color':V.rail||'#9AA0A6',
-                 'line-width':Math.max(1.2,2*G.railw*px),'line-offset':s*G.rail*px}});
-      });
-    }else{
-      map.addLayer({id:'route-casing',type:'line',source:'route',paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
+
+    /* ---- Die Strecke, nach Reiseart getrennt gezeichnet -----------------
+       Jede Art bekommt ihre eigene Quelle (ein MultiLineString aus allen
+       Abschnitten dieser Art) und ihren eigenen Stil. Ein Gleis unter einem
+       Gassenspaziergang sähe albern aus — und eine Trittspur quer über die
+       Alpen genauso.
+
+       Das Gleis ist kein 3D-Körper (das wären tausende Schwellen), sondern
+       vier Linien: Schotterbett, Schwellenschraffur, zwei versetzte
+       Schienen. Die Breiten kommen aus denselben Maßen, aus denen die Wagen
+       ihre Spurweite nehmen (SB.mesh.GAUGE × Pixel je Wagenlänge) — nur so
+       stehen die Räder auf den Schienen und nicht daneben.                */
+    var LINES=route.lines||{};
+    function quelle(m){
+      var ls=LINES[m];
+      if(!ls||!ls.length)return false;
+      map.addSource('w-'+m,{type:'geojson',
+        data:{type:'Feature',geometry:{type:'MultiLineString',coordinates:ls}}});
+      return true;
     }
-    // Die Route selbst bleibt der rote Faden — auf dem Gleis dünner, damit
-    // Schwellen und Schienen darunter sichtbar bleiben.
-    map.addLayer({id:'route',type:'line',source:'route',
-      paint:{'line-color':COLORS.route,'line-width':RAILS?2.4:4,
-             'line-dasharray':[2,1.4],'line-opacity':RAILS?.85:1}});
+    if(quelle('rail')){
+      if(PROFILE.rail.track){
+        var G=MESH.GAUGE,px=RAILPX;
+        map.addLayer({id:'rail-bed',type:'line',source:'w-rail',
+          layout:{'line-cap':'round','line-join':'round'},
+          paint:{'line-color':V.ballast||'#918B82','line-width':2*G.bed*px,'line-opacity':.92}});
+        map.addLayer({id:'rail-ties',type:'line',source:'w-rail',
+          paint:{'line-color':V.tie||'#544941','line-width':2*G.tie*px,'line-opacity':.6,
+                 'line-dasharray':[0.24,0.34]}});
+        [-1,1].forEach(function(s){
+          map.addLayer({id:'rail'+(s<0?'-l':'-r'),type:'line',source:'w-rail',
+            layout:{'line-cap':'round','line-join':'round'},
+            paint:{'line-color':V.rail||'#9AA0A6',
+                   'line-width':Math.max(1.2,2*G.railw*px),'line-offset':s*G.rail*px}});
+        });
+      }else{
+        map.addLayer({id:'rail-casing',type:'line',source:'w-rail',
+          paint:{'line-color':'#fff','line-width':7,'line-opacity':.7}});
+      }
+      // Der rote Faden: auf dem Gleis dünner, damit Schwellen und Schienen
+      // darunter sichtbar bleiben.
+      map.addLayer({id:'route',type:'line',source:'w-rail',
+        paint:{'line-color':COLORS.route,'line-width':PROFILE.rail.track?2.4:4,
+               'line-dasharray':[2,1.4],'line-opacity':PROFILE.rail.track?.85:1}});
+    }
+    /* Zu Fuß: keine Linie, sondern eine Spur aus Punkten — runde Enden und
+       eine Strichfolge ohne Strich ergeben genau das. */
+    if(quelle('foot')){
+      map.addLayer({id:'foot-casing',type:'line',source:'w-foot',
+        layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':'#fff','line-width':9,'line-opacity':.72}});
+      map.addLayer({id:'foot',type:'line',source:'w-foot',
+        layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':M.footColor||COLORS.route,'line-width':3.6,
+               'line-dasharray':[0,1.75]}});
+    }
+    // Bus & Auto: eine glatte Straße, ohne Gestrichel.
+    ['bus','car','boat'].forEach(function(m){
+      if(!quelle(m))return;
+      map.addLayer({id:m+'-casing',type:'line',source:'w-'+m,
+        layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':'#fff','line-width':8,'line-opacity':.75}});
+      map.addLayer({id:m+'-line',type:'line',source:'w-'+m,
+        layout:{'line-cap':'round','line-join':'round'},
+        paint:{'line-color':M.busColor||'#2E6F97','line-width':4}});
+    });
     map.addSource('done',{type:'geojson',data:{type:'Feature',geometry:{type:'LineString',coordinates:[R[0],R[0]]}}});
     map.addLayer({id:'done',type:'line',source:'done',
-      paint:{'line-color':COLORS.done,'line-width':RAILS?3.4:5}});
+      paint:{'line-color':COLORS.done,'line-width':PROFILE.rail.track?3.4:5}});
     map.addSource('stops',{type:'geojson',data:{type:'FeatureCollection',features:route.STOP_PTS.map(function(p){return {type:'Feature',geometry:{type:'Point',coordinates:p}}})}});
     map.addLayer({id:'stops-o',type:'circle',source:'stops',paint:{'circle-radius':8,'circle-color':COLORS.stop}});
     map.addLayer({id:'stops-i',type:'circle',source:'stops',paint:{'circle-radius':4,'circle-color':'#fff'}});
