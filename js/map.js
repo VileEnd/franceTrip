@@ -239,6 +239,7 @@ function profil(m){return PROFILE[m]||PROFILE.rail;}
 var POSEN=SB.lowPower?6:8;
 
 var mode='rail',P0=profil('rail');
+SB.mapCtl.mode=mode;
 var vehicle={pos:R[0].slice(),dir:[0,-1],f:0,size:P0.size};
 /* Antippen tauscht das Modell (tapModel:null schaltet den Gag ab). */
 var tapKind=(V.tapModel===undefined)?'croissant':V.tapModel;
@@ -559,10 +560,12 @@ function applyModel(){
    Netze werden dabei nur beim allerersten Mal wirklich gebaut. */
 function setMode(m){
   if(m===mode||!PROFILE[m])return;
-  mode=m;
+  mode=m;SB.mapCtl.mode=m;
   var p=profil(m);
   vehicle.size=p.size;CARS=Math.max(1,p.cars);PITCH=p.pitch||1;
   applyModel();
+  // Hängt sich z. B. js/gebaeude.js ein, um Häuser nur in der Stadt zu zeigen.
+  if(SB.mapCtl.onMode)SB.mapCtl.onMode(m);
 }
 function toggleModel(){
   if(!tapKind)return;

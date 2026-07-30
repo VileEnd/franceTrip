@@ -27,7 +27,8 @@ Fertig. Alles andere (`js/core|mesh|ui|map|music|story|tee3d.js`,
 | `js/core.js`   | Engine-Kern: Geräte-Erkennung, Routen-Mathematik, Daten-Vorbereitung |
 | `js/mesh.js`   | 3D-Werkzeugkasten: Grundkörper, Modelle & Shader (Fahrzeug **und** T-Shirt) |
 | `js/ui.js`     | Rendert alles aus den Trip-Daten: Hero, Karten, Inhaltsblöcke, RSVP, Footer |
-| `js/map.js`    | MapLibre-Karte: Route, Halte, Zug-Icon, 3D-Gelände |
+| `js/map.js`    | MapLibre-Karte: Route, Halte, Fahrzeuge je Reiseart, 3D-Gelände |
+| `js/gebaeude.js`| **Versuch, standardmäßig aus:** extrudierte Häuser mit `?3d=1` |
 | `js/music.js`  | Musik am Meilenstein: Autostart ohne Knopfdruck (oder Dialog) — überspringt sich selbst, wenn der Trip keine Musik hat |
 | `js/story.js`  | Scroll-Steuerung: geglätteter Render-Loop + Autopilot |
 | `js/tee3d.js`  | Macht aus dem T-Shirt-Abschnitt ein drehendes 3D-Modell (SVG bleibt Rückfallebene) |
@@ -37,7 +38,7 @@ Fertig. Alles andere (`js/core|mesh|ui|map|music|story|tee3d.js`,
 | `index.html`   | Generische Hülle mit leeren Containern |
 
 Ladereihenfolge (in `index.html`):
-`core → trip → mesh → ui → map → music → story → tee3d → teapot → zucker`.
+`core → trip → mesh → ui → map → gebaeude → music → story → tee3d → teapot → zucker`.
 Klassische `<script>`-Tags mit gemeinsamem `SB`-Namespace — läuft direkt von
 Platte (`file://`) und auf GitHub Pages, kein Build-Schritt.
 
@@ -210,6 +211,56 @@ das ist die empfohlene Form, sobald eine Route Straßenzüge enthält.
 
 Die Zoomstufe kommt weiterhin aus den Szenen: für Stadtetappen `z0`/`z1` auf
 15–16 setzen, für die Bahnfahrt auf 8–10.
+
+### Versuch: 3D-Gebäude (`?3d=1`)
+
+`js/gebaeude.js` hängt extrudierte Häuser an die Karte — **standardmäßig
+aus**, nur mit `?3d=1` in der Adresszeile. Der Versuch ist bewusst
+abgetrennt: er fasst weder den Kartenstil noch die Fahrzeuge an, und ohne
+die Datei ist die Seite exakt die von vorher.
+
+| Schalter | Wirkung |
+|----------|---------|
+| `?3d=1` | Häuser an, Anbieter OpenFreeMap (kein Schlüssel nötig) |
+| `?3d=<Style-URL>` | eigener Anbieter, z. B. eine MapTiler-Style-URL |
+| `&bl=building` | Name der Gebäude-Ebene in den Kacheln (OpenMapTiles-Schema) |
+| `&3dall=1` | Häuser auch auf der Bahnfahrt statt nur in der Stadt |
+| `?fps` | kleine Anzeige: Bildrate und blockierte Millisekunden je Sekunde |
+
+Drei Entscheidungen, die dahinterstecken:
+
+**Die Rasterkarte bleibt liegen.** Häuser brauchen Vektorkacheln, der Rest
+nicht — statt den ganzen Stil zu tauschen (und damit das Aussehen der Seite),
+kommt eine einzige `fill-extrusion`-Ebene obendrauf. Fällt der Anbieter aus,
+steht die Karte von heute unverändert da; die Anzeige sagt nur leise, dass
+die Häuser fehlen.
+
+**Die Kachel-Adresse wird zur Laufzeit aus dem Style des Anbieters gelesen,
+nicht fest notiert.** Anbieter versionieren ihre Pfade — ein hart
+eingetragener Pfad wäre irgendwann tot.
+
+**Häuser gibt es nur, wo wir zwischen ihnen stehen.** `js/map.js` meldet die
+Reiseart über `SB.mapCtl.onMode`; sichtbar wird die Ebene nur auf `foot`- und
+`bus`-Etappen. Eine Ebene ohne Sichtbarkeit lädt in MapLibre gar keine
+Kacheln — die Bahnfahrt kostet dadurch exakt nichts.
+
+Die Häuser liegen **unter** unseren eigenen Linien: der rote Faden und die
+Trittspur sollen über den Dächern verlaufen, sonst verschwindet in der
+Altstadt genau der Weg, um den es geht. Das Fahrzeug wiederum leert vor dem
+Zeichnen den Tiefenpuffer — die beiden Gehenden bleiben also auch dann
+sichtbar, wenn sie hinter einem Palazzo laufen.
+
+### Warum nicht streets.gl?
+
+Die Frage kam auf, und die Antwort ist nicht „geht nicht", sondern „passt
+nicht": streets.gl ist eine Anwendung, keine Bibliothek. Es hat kein
+Einbettungs-API und nichts wie MapLibres Custom-Layer — Zug, Bus und die
+beiden Gehenden müssten in dessen Renderer neu gebaut werden. Seine Geometrie
+holt es live von öffentlichen Overpass-Instanzen, was für eine
+veröffentlichte Seite weder erlaubt noch verlässlich ist, und als Minimum
+nennt es WebGL2 mit Float-Puffern plus „vermutlich eine moderne dedizierte
+Grafikkarte". Für eine Einladung, die auf einem Handy geöffnet wird, ist das
+der falsche Weg. Die Lizenz (MIT) wäre kein Hindernis.
 
 ### Das 3D-Fahrzeug
 
